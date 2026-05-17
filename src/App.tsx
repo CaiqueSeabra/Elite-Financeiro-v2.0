@@ -93,6 +93,22 @@ const initialContasFixasData = [
   { id: 'cf-6', desc: 'Seguro da moto', dia: 20, valor: 175.20, status: 'pendente' },
 ];
 
+const getEffectiveDate = (dia: number, status: string) => {
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth();
+  
+  if (status === 'pago') {
+    month += 1;
+    if (month > 11) {
+      month = 0;
+      year += 1;
+    }
+  }
+  
+  return new Date(year, month, dia);
+};
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('painel');
@@ -117,18 +133,24 @@ export default function App() {
       Notification.requestPermission();
     }
 
-    const hoje = new Date().getDate();
+    const hojeData = new Date();
+    const hoje = new Date(hojeData.getFullYear(), hojeData.getMonth(), hojeData.getDate());
+    
     const contasEmAlerta = contasFixas.filter((c: any) => {
       if (c.status !== 'pendente') return false;
-      let dif = c.dia - hoje;
-      return (dif >= 0 && dif <= 3);
+      const dataVencimento = getEffectiveDate(c.dia, c.status);
+      const diffTime = dataVencimento.getTime() - hoje.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      return (diffDays >= 0 && diffDays <= 3);
     });
 
     setAlerts(contasEmAlerta);
 
     if (!hasNotified.current && "Notification" in window && Notification.permission === "granted") {
       contasEmAlerta.forEach((c: any) => {
-        let dias = c.dia - hoje;
+        const dataVencimento = getEffectiveDate(c.dia, c.status);
+        const diffTime = dataVencimento.getTime() - hoje.getTime();
+        const dias = Math.round(diffTime / (1000 * 60 * 60 * 24));
         const msg = dias === 0 
           ? `Elite Financeiro: A conta ${c.desc} vence HOJE. Organize o caixa!` 
           : `Elite Financeiro: A conta ${c.desc} vence em ${dias} dias. Organize o caixa!`;
@@ -295,7 +317,12 @@ export default function App() {
         {/* Content Body */}
         <main className="p-4 sm:p-8 flex-grow overflow-y-auto">
           {alerts.map((a: any) => {
-            const diasParaVencer = a.dia - new Date().getDate();
+            const dataVencimento = getEffectiveDate(a.dia, a.status);
+            const hojeData = new Date();
+            const hoje = new Date(hojeData.getFullYear(), hojeData.getMonth(), hojeData.getDate());
+            const diffTime = dataVencimento.getTime() - hoje.getTime();
+            const diasParaVencer = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            
             return (
               <div key={`alert-${a.id}`} className="bg-[#ff3300]/10 border border-[#ff3300] text-[#ff3300] p-4 rounded-xl mb-4 font-bold flex items-center justify-center animate-pulse drop-shadow-[0_0_10px_rgba(255,51,0,0.5)]">
                 ⚠️ ATENÇÃO OPERACIONAL: {a.desc} vence {diasParaVencer === 0 ? "HOJE" : `em ${diasParaVencer} dias`}!
@@ -888,14 +915,18 @@ function GerenciadorContasFixas({ contasFixas, setContasFixas }: { contasFixas: 
     setEditingId(conta.id);
   };
 
-  const getDistance = (dia: number) => {
-    let today = new Date().getDate();
-    let dist = dia - today;
-    if (dist < 0) dist += 31;
-    return dist;
-  }
+  const sortedContas = [...contasFixas].sort((a, b) => {
+    const dateA = getEffectiveDate(a.dia, a.status);
+    const dateB = getEffectiveDate(b.dia, b.status);
+    return dateA.getTime() - dateB.getTime();
+  });
 
-  const sortedContas = [...contasFixas].sort((a, b) => getDistance(a.dia) - getDistance(b.dia));
+  const formatData = (date: Date) => {
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+  };
 
   const formatBrl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -969,7 +1000,7 @@ function GerenciadorContasFixas({ contasFixas, setContasFixas }: { contasFixas: 
                   </tr>
                 ) : sortedContas.map((c) => (
                   <tr key={c.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="p-4 text-center font-bold text-slate-400">{String(c.dia).padStart(2, '0')}</td>
+                    <td className="p-4 text-center font-bold text-slate-400">{formatData(getEffectiveDate(c.dia, c.status))}</td>
                     <td className={cn("p-4 font-medium", c.status === 'pago' && "line-through text-slate-600")}>{c.desc}</td>
                     <td className="p-4 font-mono">
                       {c.status === 'pago' ? (
