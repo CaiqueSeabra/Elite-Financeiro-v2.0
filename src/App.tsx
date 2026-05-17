@@ -145,11 +145,6 @@ export default function App() {
               <div className="font-semibold text-sm">Carlos</div>
               <div className="text-xs text-neon-green">Operador Elite ativo</div>
             </div>
-            <img 
-              src="https://api.dicebear.com/7.x/bottts/svg?seed=Carlos" 
-              alt="Avatar" 
-              className="w-10 h-10 rounded-full border-2 border-neon-blue bg-black/40"
-            />
             <button 
               onClick={() => setIsAuthenticated(false)}
               className="ml-2 p-2 rounded-xl hover:bg-white/5 text-gray-400 hover:text-neon-red transition-colors"
