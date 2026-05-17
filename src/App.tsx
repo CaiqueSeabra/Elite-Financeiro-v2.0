@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Eye, EyeOff, LayoutDashboard, ArrowLeftRight, CalendarDays, Handshake, LogOut, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Eye, EyeOff, LayoutDashboard, ArrowLeftRight, CalendarDays, Handshake, LogOut, CheckCircle2, ClipboardList } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { cn } from './lib/utils';
 
@@ -58,6 +58,15 @@ const initialNubankData = [
   { id: 'st-agosto', data: '19 de Agosto de 2026', valor: 271.67, status: 'pendente' }
 ];
 
+const initialContasFixasData = [
+  { id: 'cf-1', desc: 'Prestação da Moto', dia: 8, valor: 1093.55, status: 'pendente' },
+  { id: 'cf-2', desc: 'Internet do chip da Vivo', dia: 10, valor: 50.00, status: 'pendente' },
+  { id: 'cf-3', desc: 'Luz', dia: 15, valor: 150.00, status: 'pendente' },
+  { id: 'cf-4', desc: 'Aluguel', dia: 15, valor: 950.00, status: 'pendente' },
+  { id: 'cf-5', desc: 'Internet de casa conect', dia: 20, valor: 100.00, status: 'pendente' },
+  { id: 'cf-6', desc: 'Seguro da moto', dia: 20, valor: 175.20, status: 'pendente' },
+];
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('painel');
@@ -70,6 +79,38 @@ export default function App() {
   const [chartData, setChartData] = useLocalStorage('elite_chart', initialChartData);
   const [ganhosRua, setGanhosRua] = useLocalStorage('elite_ganhos', 1500.00); // Ganhos atuais do mês na rua
   const [showProfitAlert, setShowProfitAlert] = useState(false);
+  const [contasFixas, setContasFixas] = useLocalStorage('elite_contas', initialContasFixasData);
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  const hasNotified = useRef(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    const hoje = new Date().getDate();
+    const contasEmAlerta = contasFixas.filter((c: any) => {
+      if (c.status !== 'pendente') return false;
+      let dif = c.dia - hoje;
+      return (dif >= 0 && dif <= 3);
+    });
+
+    setAlerts(contasEmAlerta);
+
+    if (!hasNotified.current && "Notification" in window && Notification.permission === "granted") {
+      contasEmAlerta.forEach((c: any) => {
+        let dias = c.dia - hoje;
+        const msg = dias === 0 
+          ? `Elite Financeiro: A conta ${c.desc} vence HOJE. Organize o caixa!` 
+          : `Elite Financeiro: A conta ${c.desc} vence em ${dias} dias. Organize o caixa!`;
+        new Notification("Elite Financeiro", { body: msg });
+      });
+      hasNotified.current = true;
+    }
+  }, [isAuthenticated, contasFixas]);
 
   const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   const mesAtualNome = meses[new Date().getMonth()];
@@ -210,6 +251,13 @@ export default function App() {
             Cronograma Nubank
           </TabButton>
           <TabButton 
+            active={activeTab === 'contas'} 
+            onClick={() => setActiveTab('contas')}
+            icon={<ClipboardList size={16} />}
+          >
+            Gerenciador Contas Fixas
+          </TabButton>
+          <TabButton 
             active={activeTab === 'crosser'} 
             onClick={() => setActiveTab('crosser')}
             icon={<Handshake size={16} />}
@@ -220,8 +268,17 @@ export default function App() {
 
         {/* Content Body */}
         <main className="p-4 sm:p-8 flex-grow overflow-y-auto">
+          {alerts.map((a: any) => {
+            const diasParaVencer = a.dia - new Date().getDate();
+            return (
+              <div key={`alert-${a.id}`} className="bg-[#ff3300]/10 border border-[#ff3300] text-[#ff3300] p-4 rounded-xl mb-4 font-bold flex items-center justify-center animate-pulse drop-shadow-[0_0_10px_rgba(255,51,0,0.5)]">
+                ⚠️ ATENÇÃO OPERACIONAL: {a.desc} vence {diasParaVencer === 0 ? "HOJE" : `em ${diasParaVencer} dias`}!
+              </div>
+            );
+          })}
           {activeTab === 'painel' && <PainelGeral reservaAcumulada={reservaAcumulada} chartData={chartData} ganhosRua={ganhosRua} pontoEquilibrio={pontoEquilibrio} />}
           {activeTab === 'fluxo' && <FluxoCaixa extratoData={extratoData} onAddLancamento={handleAddLancamento} />}
+          {activeTab === 'contas' && <GerenciadorContasFixas contasFixas={contasFixas} setContasFixas={setContasFixas} />}
           {activeTab === 'nubank' && <CronogramaNubank nubankData={nubankData} onQuitarFatura={handleQuitarFatura} />}
           {activeTab === 'crosser' && <DividaCrosser saldoAmigo={saldoAmigo} onAbaterDivida={handleAbaterDivida} />}
         </main>
@@ -745,6 +802,173 @@ function DividaCrosser({ saldoAmigo, onAbaterDivida }: { saldoAmigo: number, onA
               </p>
             </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function GerenciadorContasFixas({ contasFixas, setContasFixas }: { contasFixas: any[], setContasFixas: React.Dispatch<React.SetStateAction<any[]>> }) {
+  const [desc, setDesc] = useState('');
+  const [diaStr, setDiaStr] = useState('');
+  const [valorStr, setValorStr] = useState('');
+
+  const submit = () => {
+    const dia = parseInt(diaStr);
+    const valor = parseFloat(valorStr.replace(',', '.'));
+    
+    if (!desc || isNaN(dia) || isNaN(valor) || dia < 1 || dia > 31 || valor <= 0) {
+      alert('Preencha a descrição, um dia válido (1-31) e um valor numérico!');
+      return;
+    }
+
+    const novaConta = {
+      id: `cf-${Date.now()}`,
+      desc,
+      dia,
+      valor,
+      status: 'pendente'
+    };
+
+    setContasFixas([...contasFixas, novaConta]);
+    setDesc('');
+    setDiaStr('');
+    setValorStr('');
+  };
+
+  const handleExcluir = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir esta conta?')) {
+      setContasFixas(contasFixas.filter(c => c.id !== id));
+    }
+  };
+
+  const handleBaixa = (id: string) => {
+    setContasFixas(contasFixas.map(c => 
+      c.id === id ? { ...c, status: 'pago' } : c
+    ));
+  };
+
+  const getDistance = (dia: number) => {
+    let today = new Date().getDate();
+    let dist = dia - today;
+    if (dist < 0) dist += 31;
+    return dist;
+  }
+
+  const sortedContas = [...contasFixas].sort((a, b) => getDistance(a.dia) - getDistance(b.dia));
+
+  const formatBrl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        
+        <div className="col-span-1 border border-white/5 bg-[#0d101a]/90 rounded-2xl p-5 sm:p-6 shadow-sm h-fit">
+          <h3 className="text-[1.1rem] mb-6 border-l-4 border-neon-blue pl-3 font-semibold">Adicionar Conta Fixa</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Descrição</label>
+              <input 
+                type="text" 
+                value={desc}
+                onChange={(e) => setDesc(e.target.value)}
+                placeholder="Ex: Condomínio"
+                className="w-full bg-black/40 border border-white/10 p-3.5 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:border-neon-blue focus:shadow-[0_0_10px_rgba(0,240,255,0.2)] transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Dia de Vencimento (1 a 31)</label>
+              <input 
+                type="number" 
+                value={diaStr}
+                onChange={(e) => setDiaStr(e.target.value)}
+                placeholder="Ex: 5"
+                min="1" max="31"
+                className="w-full bg-black/40 border border-white/10 p-3.5 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:border-neon-blue focus:shadow-[0_0_10px_rgba(0,240,255,0.2)] transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Valor (R$)</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-medium">R$</span>
+                <input 
+                  type="number" 
+                  value={valorStr}
+                  onChange={(e) => setValorStr(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  className="w-full bg-black/40 border border-white/10 p-3.5 pl-10 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:border-neon-blue focus:shadow-[0_0_10px_rgba(0,240,255,0.2)] transition-all"
+                />
+              </div>
+            </div>
+            <button onClick={submit} className="w-full mt-2 bg-transparent border border-neon-blue text-neon-blue py-3 rounded-xl font-bold hover:bg-neon-blue hover:text-black hover:shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all">
+              Salvar Conta Fixa
+            </button>
+          </div>
+        </div>
+
+        <div className="col-span-1 lg:col-span-2 border border-white/5 bg-[#0d101a]/90 rounded-2xl p-5 sm:p-6 shadow-sm">
+          <h3 className="text-[1.1rem] mb-2 border-l-4 border-neon-blue pl-3 font-semibold">Cronograma de Vencimentos (Ordem de Prioridade)</h3>
+          <p className="text-slate-400 text-sm mb-6">Contas organizadas baseadas na proximidade de vencimento a partir do dia de hoje ({new Date().getDate()}).</p>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-white/5">
+                <tr className="text-neon-blue">
+                  <th className="p-4 font-semibold rounded-tl-xl text-center">Dia</th>
+                  <th className="p-4 font-semibold">Descrição da Conta</th>
+                  <th className="p-4 font-semibold">Valor</th>
+                  <th className="p-4 font-semibold">Status</th>
+                  <th className="p-4 font-semibold text-right rounded-tr-xl">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-slate-300">
+                {sortedContas.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center text-slate-500">Nenhuma conta cadastrada.</td>
+                  </tr>
+                ) : sortedContas.map((c) => (
+                  <tr key={c.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="p-4 text-center font-bold text-slate-400">{String(c.dia).padStart(2, '0')}</td>
+                    <td className={cn("p-4 font-medium", c.status === 'pago' && "line-through text-slate-600")}>{c.desc}</td>
+                    <td className="p-4 font-mono">
+                      {c.status === 'pago' ? (
+                        <span className="text-neon-green">R$ 0,00 <span className="line-through text-slate-600 text-xs ml-2">{formatBrl(c.valor)}</span></span>
+                      ) : (
+                        <span className="text-white">{formatBrl(c.valor)}</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <span className={cn(
+                        "px-3 py-1 rounded-md text-xs font-bold uppercase",
+                        c.status === 'pendente'
+                          ? "bg-[#ff9900]/10 text-[#ff9900] border border-[#ff9900]/20"
+                          : "bg-neon-green/10 text-neon-green border border-neon-green/20"
+                      )}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => handleBaixa(c.id)}
+                          disabled={c.status === 'pago'}
+                          className="bg-transparent border border-neon-green text-neon-green px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-neon-green hover:text-black transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-neon-green"
+                        >
+                          Pago
+                        </button>
+                        <button 
+                          onClick={() => handleExcluir(c.id)}
+                          className="bg-transparent border border-neon-red text-neon-red px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-neon-red hover:text-white transition-all hover:shadow-[0_0_10px_rgba(255,0,85,0.4)]"
+                        >
+                          X
+                        </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
   );
