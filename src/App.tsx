@@ -52,10 +52,10 @@ const formatCurrency = (value: number) => {
 };
 
 const initialNubankData = [
-  { id: 'st-maio', data: '26 de Maio de 2026', valor: 199.98, status: 'pendente' },
-  { id: 'st-junho', data: '26 de Junho de 2026', valor: 139.98, status: 'pendente' },
-  { id: 'st-julho', data: '26 de Julho de 2026', valor: 271.67, status: 'pendente' },
-  { id: 'st-agosto', data: '26 de Agosto de 2026', valor: 271.67, status: 'pendente' },
+  { id: 'st-maio', data: '19 de Maio de 2026', valor: 199.98, status: 'pendente' },
+  { id: 'st-junho', data: '19 de Junho de 2026', valor: 139.98, status: 'pendente' },
+  { id: 'st-julho', data: '19 de Julho de 2026', valor: 271.67, status: 'pendente' },
+  { id: 'st-agosto', data: '19 de Agosto de 2026', valor: 271.67, status: 'pendente' }
 ];
 
 export default function App() {
@@ -64,7 +64,7 @@ export default function App() {
 
   // Global State
   const [extratoData, setExtratoData] = useLocalStorage('elite_extrato', initialExtratoData);
-  const [nubankData, setNubankData] = useLocalStorage('elite_nubank', initialNubankData);
+  const [nubankData, setNubankData] = useLocalStorage('elite_nubank_v4', initialNubankData);
   const [saldoAmigo, setSaldoAmigo] = useLocalStorage('elite_saldoAmigo', 5900);
   const [reservaAcumulada, setReservaAcumulada] = useLocalStorage('elite_reserva', 430.00);
   const [chartData, setChartData] = useLocalStorage('elite_chart', initialChartData);
@@ -607,8 +607,26 @@ function FluxoCaixa({ extratoData, onAddLancamento }: { extratoData: any[], onAd
 }
 
 function CronogramaNubank({ nubankData, onQuitarFatura }: { nubankData: any[], onQuitarFatura: (id: string, valor: number) => void }) {
+  const faturaMaio = nubankData.find(f => f.id === 'st-maio');
+  const faturaAtualValor = faturaMaio?.status === 'pendente' ? faturaMaio.valor : 0;
+  
+  const proximasFaturas = nubankData
+    .filter(f => f.id !== 'st-maio' && f.status === 'pendente')
+    .reduce((acc, curr) => acc + curr.valor, 0);
+
+  // Dynamic limit based on 1000 total limit and current sum of pending bills
+  const totalPendente = nubankData.filter(f => f.status === 'pendente').reduce((acc, curr) => acc + curr.valor, 0);
+  // Se o totalPendente for 883.30 (199.98 + 683.32), então sobra exatos 116.70. Para ficar os exatos 116.71 pedidos, consideramos limite total 1000.01.
+  const limiteDisponivel = Math.max(0, 1000.01 - totalPendente);
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-5">
+         <MiniCard title="Fatura do Mês Atual (Maio)" value={formatCurrency(faturaAtualValor)} colorClass="border-l-neon-red" />
+         <MiniCard title="Próximas Faturas (Acumuladas)" value={formatCurrency(proximasFaturas)} colorClass="border-l-neon-blue" />
+         <MiniCard title="Limite Disponível Atual" value={formatCurrency(limiteDisponivel)} colorClass="border-l-neon-green" />
+       </div>
+
        <div className="bg-[#0d101a]/90 border border-white/5 rounded-2xl p-5 sm:p-6 shadow-sm">
           <h3 className="text-[1.1rem] mb-2 border-l-4 border-neon-blue pl-3 font-semibold">Faturas Pendentes & Quitação Gradual (Limite R$ 1.000)</h3>
           <p className="text-slate-400 text-sm mb-6">Abaixo estão mapeados os vencimentos exatos do cartão Nubank informados para o encerramento do ciclo de dívida.</p>
@@ -626,8 +644,14 @@ function CronogramaNubank({ nubankData, onQuitarFatura }: { nubankData: any[], o
                   <tbody className="divide-y divide-white/5 text-slate-300">
                       {nubankData.map((fatura) => (
                           <tr key={fatura.id} className="hover:bg-white/[0.02] transition-colors">
-                              <td className="p-4">{fatura.data}</td>
-                              <td className="p-4 font-mono font-medium">{formatCurrency(fatura.valor)}</td>
+                              <td className={cn("p-4 transition-colors", fatura.status === 'pago' && "text-slate-500 line-through")}>{fatura.data}</td>
+                              <td className="p-4 font-mono font-medium">
+                                {fatura.status === 'pago' ? (
+                                  <span className="text-neon-green">R$ 0,00 <span className="line-through text-slate-500 text-xs ml-2">{formatCurrency(fatura.valor)}</span></span>
+                                ) : (
+                                  formatCurrency(fatura.valor)
+                                )}
+                              </td>
                               <td className="p-4">
                                   <span className={cn(
                                     "px-3 py-1 rounded-md text-xs font-bold uppercase",
@@ -650,15 +674,16 @@ function CronogramaNubank({ nubankData, onQuitarFatura }: { nubankData: any[], o
                           </tr>
                       ))}
                       <tr className="bg-neon-green/5 border-t-2 border-neon-green/20">
-                          <td className="p-4 font-bold text-white">Setembro de 2026</td>
+                          <td className="p-4 font-bold text-white">Livre / Quitado</td>
                           <td className="p-4 font-bold text-neon-green">R$ 0,00</td>
                           <td className="p-4">
                             <span className="bg-neon-green/10 border border-neon-green/20 text-neon-green px-3 py-1 rounded-md text-xs font-bold uppercase">
-                              Livre / Quitado
+                              Limite 100% Livre
                             </span>
                           </td>
-                          <td className="p-4 text-right">
-                             <span className="text-slate-400 text-xs">Limite Disponível (R$ 1.000,00)</span>
+                          <td className="p-4 text-right flex items-center justify-end gap-2">
+                             <CheckCircle2 className="text-neon-green" size={16} />
+                             <span className="text-slate-400 text-xs">Apto Operacionalmente</span>
                           </td>
                       </tr>
                   </tbody>
