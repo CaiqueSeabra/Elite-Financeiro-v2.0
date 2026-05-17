@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, LayoutDashboard, ArrowLeftRight, CalendarDays, Handshake, LogOut, CheckCircle2, ClipboardList } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { cn } from './lib/utils';
@@ -47,6 +47,32 @@ const initialExtratoData = [
   { id: 8, desc: 'Custo Estimado Rodagem', tipo: 'saida-gasolina', valor: 652.00 },
 ];
 
+const parseCurrencyInput = (valorStr: string) => {
+  if (!valorStr) return 0;
+  return parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
+};
+
+const formatToCurrencyInput = (val: number | string) => {
+  if (val === '') return '';
+  const num = typeof val === 'string' ? parseFloat(val) : val;
+  if (isNaN(num)) return '';
+  let v = num.toFixed(2).replace(".", ",");
+  v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+  return v;
+};
+
+const handleCurrencyChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
+  let v = e.target.value.replace(/\D/g, "");
+  if (!v) {
+    setter("");
+    return;
+  }
+  v = (parseInt(v, 10) / 100).toFixed(2);
+  v = v.replace(".", ",");
+  v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+  setter(v);
+};
+
 const formatCurrency = (value: number) => {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
@@ -63,7 +89,7 @@ const initialContasFixasData = [
   { id: 'cf-2', desc: 'Internet do chip da Vivo', dia: 10, valor: 50.00, status: 'pendente' },
   { id: 'cf-3', desc: 'Luz', dia: 15, valor: 150.00, status: 'pendente' },
   { id: 'cf-4', desc: 'Aluguel', dia: 15, valor: 950.00, status: 'pendente' },
-  { id: 'cf-5', desc: 'Internet de casa conect', dia: 20, valor: 100.00, status: 'pendente' },
+  { id: 'cf-5', desc: 'Internet de casa conect', dia: 20, valor: 79.99, status: 'pendente' },
   { id: 'cf-6', desc: 'Seguro da moto', dia: 20, valor: 175.20, status: 'pendente' },
 ];
 
@@ -120,7 +146,7 @@ export default function App() {
   const pontoEquilibrio = basePontoEquilibrio + (faturaMesAtual ? faturaMesAtual.valor : 0);
 
   const handleAddLancamento = (tipo: string, desc: string, valorStr: string) => {
-    const valor = parseFloat(valorStr.replace(',', '.'));
+    const valor = parseCurrencyInput(valorStr);
     if (!desc || isNaN(valor) || valor <= 0) {
       alert('Preencha a descrição e um valor numérico válido maior que zero.');
       return;
@@ -183,7 +209,7 @@ export default function App() {
   };
 
   const handleAbaterDivida = (valorStr: string) => {
-    const valorAbate = parseFloat(valorStr.replace(',', '.'));
+    const valorAbate = parseCurrencyInput(valorStr);
     
     if (isNaN(valorAbate) || valorAbate <= 0) {
       alert('Informe um valor de repasse válido.');
@@ -582,11 +608,11 @@ function FluxoCaixa({ extratoData, onAddLancamento }: { extratoData: any[], onAd
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-medium">R$</span>
                 <input 
-                  type="number" 
-                  step="0.01"
+                  type="text" 
+                  inputMode="numeric"
                   value={valor}
-                  onChange={(e) => setValor(e.target.value)}
-                  placeholder="0.00"
+                  onChange={(e) => handleCurrencyChange(e, setValor)}
+                  placeholder="0,00"
                   className="w-full bg-black/40 border border-white/10 p-3.5 pl-10 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:border-neon-blue focus:shadow-[0_0_10px_rgba(0,240,255,0.2)] transition-all"
                 />
               </div>
@@ -774,11 +800,11 @@ function DividaCrosser({ saldoAmigo, onAbaterDivida }: { saldoAmigo: number, onA
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-medium">R$</span>
                   <input 
-                    type="number" 
-                    step="0.01"
+                    type="text" 
+                    inputMode="numeric"
                     value={valor}
-                    onChange={(e) => setValor(e.target.value)}
-                    placeholder="Ex: 1000"
+                    onChange={(e) => handleCurrencyChange(e, setValor)}
+                    placeholder="Ex: 1.000,00"
                     className="w-full bg-black/40 border border-white/10 p-3.5 pl-10 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:border-neon-blue focus:shadow-[0_0_10px_rgba(0,240,255,0.2)] transition-all"
                   />
                 </div>
@@ -811,25 +837,33 @@ function GerenciadorContasFixas({ contasFixas, setContasFixas }: { contasFixas: 
   const [desc, setDesc] = useState('');
   const [diaStr, setDiaStr] = useState('');
   const [valorStr, setValorStr] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const submit = () => {
     const dia = parseInt(diaStr);
-    const valor = parseFloat(valorStr.replace(',', '.'));
+    const valor = parseCurrencyInput(valorStr);
     
     if (!desc || isNaN(dia) || isNaN(valor) || dia < 1 || dia > 31 || valor <= 0) {
       alert('Preencha a descrição, um dia válido (1-31) e um valor numérico!');
       return;
     }
 
-    const novaConta = {
-      id: `cf-${Date.now()}`,
-      desc,
-      dia,
-      valor,
-      status: 'pendente'
-    };
-
-    setContasFixas([...contasFixas, novaConta]);
+    if (editingId) {
+      setContasFixas(contasFixas.map(c => 
+        c.id === editingId ? { ...c, desc, dia, valor } : c
+      ));
+      setEditingId(null);
+    } else {
+      const novaConta = {
+        id: `cf-${Date.now()}`,
+        desc,
+        dia,
+        valor,
+        status: 'pendente'
+      };
+      setContasFixas([...contasFixas, novaConta]);
+    }
+    
     setDesc('');
     setDiaStr('');
     setValorStr('');
@@ -845,6 +879,13 @@ function GerenciadorContasFixas({ contasFixas, setContasFixas }: { contasFixas: 
     setContasFixas(contasFixas.map(c => 
       c.id === id ? { ...c, status: 'pago' } : c
     ));
+  };
+
+  const handleEdit = (conta: any) => {
+    setDesc(conta.desc);
+    setDiaStr(String(conta.dia));
+    setValorStr(formatToCurrencyInput(conta.valor));
+    setEditingId(conta.id);
   };
 
   const getDistance = (dia: number) => {
@@ -891,17 +932,17 @@ function GerenciadorContasFixas({ contasFixas, setContasFixas }: { contasFixas: 
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-medium">R$</span>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="numeric"
                   value={valorStr}
-                  onChange={(e) => setValorStr(e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
+                  onChange={(e) => handleCurrencyChange(e, setValorStr)}
+                  placeholder="0,00"
                   className="w-full bg-black/40 border border-white/10 p-3.5 pl-10 rounded-xl text-white placeholder:text-slate-600 focus:outline-none focus:border-neon-blue focus:shadow-[0_0_10px_rgba(0,240,255,0.2)] transition-all"
                 />
               </div>
             </div>
             <button onClick={submit} className="w-full mt-2 bg-transparent border border-neon-blue text-neon-blue py-3 rounded-xl font-bold hover:bg-neon-blue hover:text-black hover:shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all">
-              Salvar Conta Fixa
+              {editingId ? 'Atualizar Conta Fixa' : 'Salvar Conta Fixa'}
             </button>
           </div>
         </div>
@@ -954,6 +995,12 @@ function GerenciadorContasFixas({ contasFixas, setContasFixas }: { contasFixas: 
                           className="bg-transparent border border-neon-green text-neon-green px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-neon-green hover:text-black transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-neon-green"
                         >
                           Pago
+                        </button>
+                        <button 
+                          onClick={() => handleEdit(c)}
+                          className="bg-transparent border border-blue-400 text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-400 hover:text-white transition-all hover:shadow-[0_0_10px_rgba(96,165,250,0.4)]"
+                        >
+                          ✏️
                         </button>
                         <button 
                           onClick={() => handleExcluir(c.id)}
