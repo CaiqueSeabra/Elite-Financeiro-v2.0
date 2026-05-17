@@ -329,7 +329,7 @@ export default function App() {
               </div>
             );
           })}
-          {activeTab === 'painel' && <PainelGeral reservaAcumulada={reservaAcumulada} chartData={chartData} ganhosRua={ganhosRua} pontoEquilibrio={pontoEquilibrio} />}
+          {activeTab === 'painel' && <PainelGeral reservaAcumulada={reservaAcumulada} chartData={chartData} ganhosRua={ganhosRua} pontoEquilibrio={pontoEquilibrio} extratoData={extratoData} />}
           {activeTab === 'fluxo' && <FluxoCaixa extratoData={extratoData} onAddLancamento={handleAddLancamento} />}
           {activeTab === 'contas' && <GerenciadorContasFixas contasFixas={contasFixas} setContasFixas={setContasFixas} />}
           {activeTab === 'nubank' && <CronogramaNubank nubankData={nubankData} onQuitarFatura={handleQuitarFatura} />}
@@ -512,7 +512,15 @@ function IndicadorPastel({ ganhos, meta }: { ganhos: number, meta: number }) {
   );
 }
 
-function PainelGeral({ reservaAcumulada, chartData, ganhosRua, pontoEquilibrio }: { reservaAcumulada: number, chartData: any[], ganhosRua: number, pontoEquilibrio: number }) {
+function PainelGeral({ reservaAcumulada, chartData, ganhosRua, pontoEquilibrio, extratoData }: { reservaAcumulada: number, chartData: any[], ganhosRua: number, pontoEquilibrio: number, extratoData: any[] }) {
+  const hojeStr = new Date().toDateString();
+  const entradasHoje = extratoData
+    .filter((item: any) => item.tipo.startsWith('entrada') && new Date(item.id).toDateString() === hojeStr)
+    .reduce((acc: number, curr: any) => acc + curr.valor, 0);
+
+  const bateuMetaHoje = entradasHoje >= 107;
+  const faltaHoje = Math.max(0, 107 - entradasHoje);
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
       <IndicadorPastel ganhos={ganhosRua} meta={pontoEquilibrio} />
@@ -556,6 +564,14 @@ function PainelGeral({ reservaAcumulada, chartData, ganhosRua, pontoEquilibrio }
             </p>
             <div className="space-y-1">
               <p className="text-slate-400"><span className="inline-block w-4">•</span> Meta Semanal Mínima: <span className="text-white font-medium">R$ 642,00</span></p>
+              <p className="text-neon-blue font-semibold border-l-2 border-neon-blue pl-2 ml-4">
+                🎯 Meta Diária Operacional (6 dias): <span className="text-white">R$ 107,00</span> 
+                {entradasHoje > 0 && (
+                  <span className={cn("ml-2 text-[0.8rem] px-2 py-0.5 rounded", bateuMetaHoje ? "bg-neon-green/20 text-neon-green" : "bg-[#ff9900]/20 text-[#ff9900]")}>
+                    {bateuMetaHoje ? "Meta diária batida! 🏆" : `Progresso: Falta ${formatCurrency(faltaHoje)}`}
+                  </span>
+                )}
+              </p>
               <p className="text-neon-blue"><span className="inline-block w-4">•</span> Produção Média Realizada: <span className="font-bold">R$ 1.000,00</span></p>
               <p className="text-slate-400"><span className="inline-block w-4">•</span> Sobra Estimada Mensal Livre: <span className="text-white font-medium">R$ 1.540,00</span></p>
             </div>
