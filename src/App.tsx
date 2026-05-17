@@ -1,7 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, EyeOff, LayoutDashboard, ArrowLeftRight, CalendarDays, Handshake, LogOut, CheckCircle2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { cn } from './lib/utils';
+
+function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    if (typeof window === "undefined") {
+      return initialValue;
+    }
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.log(error);
+      return initialValue;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(storedValue));
+    } catch (error) {
+      console.log(error);
+    }
+  }, [key, storedValue]);
+
+  return [storedValue, setStoredValue];
+}
 
 // --- MOCK DATA ---
 const initialChartData = [
@@ -38,14 +63,20 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('painel');
 
   // Global State
-  const [extratoData, setExtratoData] = useState(initialExtratoData);
-  const [nubankData, setNubankData] = useState(initialNubankData);
-  const [saldoAmigo, setSaldoAmigo] = useState(5900);
-  const [reservaAcumulada, setReservaAcumulada] = useState(430.00);
-  const [chartData, setChartData] = useState(initialChartData);
-  const [ganhosRua, setGanhosRua] = useState(1500.00); // Ganhos atuais do mês na rua
+  const [extratoData, setExtratoData] = useLocalStorage('elite_extrato', initialExtratoData);
+  const [nubankData, setNubankData] = useLocalStorage('elite_nubank', initialNubankData);
+  const [saldoAmigo, setSaldoAmigo] = useLocalStorage('elite_saldoAmigo', 5900);
+  const [reservaAcumulada, setReservaAcumulada] = useLocalStorage('elite_reserva', 430.00);
+  const [chartData, setChartData] = useLocalStorage('elite_chart', initialChartData);
+  const [ganhosRua, setGanhosRua] = useLocalStorage('elite_ganhos', 1500.00); // Ganhos atuais do mês na rua
   const [showProfitAlert, setShowProfitAlert] = useState(false);
-  const pontoEquilibrio = 2760.00;
+
+  const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const mesAtualNome = meses[new Date().getMonth()];
+  const faturaMesAtual = nubankData.find(f => f.data.includes(mesAtualNome) && f.status === 'pendente');
+  
+  const basePontoEquilibrio = 2760.00;
+  const pontoEquilibrio = basePontoEquilibrio + (faturaMesAtual ? faturaMesAtual.valor : 0);
 
   const handleAddLancamento = (tipo: string, desc: string, valorStr: string) => {
     const valor = parseFloat(valorStr.replace(',', '.'));
@@ -207,11 +238,11 @@ function ProfitAlertModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-[#0f121c] border-2 border-neon-green rounded-3xl p-8 max-w-lg w-full shadow-[0_0_50px_rgba(57,255,20,0.3)] text-center animate-in zoom-in-90 duration-500">
-        <div className="text-6xl mb-4 animate-bounce">🥟🚀</div>
+        <div className="text-6xl mb-4 animate-bounce">💰🚀</div>
         <h2 className="text-3xl font-bold font-heading text-neon-green mb-4 drop-shadow-[0_0_10px_rgba(57,255,20,0.6)]">ZONA DE LUCRO PURO!</h2>
         <p className="text-lg text-slate-300 mb-6">
           Parabéns! Todos os custos operacionais do mês foram cobertos.
-          A partir de agora, <strong>TODO O PASTEL É SEU!</strong> 💸
+          A partir de agora, <strong>SUA MARGEM LIVRE ESTÁ ATIVA!</strong> 💸
         </p>
         <button 
           onClick={onClose}
@@ -333,16 +364,16 @@ function IndicadorPastel({ ganhos, meta }: { ganhos: number, meta: number }) {
       <div className={cn("absolute -top-20 -right-20 w-64 h-64 blur-[80px] opacity-20 rounded-full", inProfit ? "bg-neon-green" : "bg-neon-blue")}></div>
       
       <h3 className="text-sm text-slate-400 uppercase font-bold tracking-wider mb-2 flex items-center gap-2">
-        <span className="text-xl drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">🥟</span> Técnica do Pastel Chinês
+        <span className="text-xl drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">📊</span> GESTÃO DE COBERTURA OPERACIONAL
       </h3>
       
       {inProfit ? (
         <div className="text-neon-green font-bold text-xl sm:text-2xl mb-4 drop-shadow-[0_0_8px_rgba(57,255,20,0.5)] animate-in fade-in zoom-in duration-500">
-          🚀 ZONA DE LUCRO PURO: Agora o pastel é seu!
+          🚀 ZONA DE LUCRO PURO: Estrutura Paga! Margem Livre Ativa
         </div>
       ) : (
         <div className="text-neon-blue font-bold text-lg sm:text-xl mb-2 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] transition-all duration-300">
-          🛠️ Pagando os Custos Operacionais...
+          🛠️ Liquidando Custos Operacionais Base...
         </div>
       )}
 
