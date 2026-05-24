@@ -30,12 +30,20 @@ export default function App() {
   const [ganhosDiarios, setGanhosDiarios] = useState<GanhoDiario[]>([
     { id: 'initial-ifood-saldo', data: (() => { const d = new Date(); return d.toISOString().split('T')[0]; })(), app: 'iFood', valor: 414.31 }
   ]);
-  const [novoGanhoData, setNovoGanhoData] = useState(() => {
+  const [novoGanhoAppData, setNovoGanhoAppData] = useState(() => {
     const d = new Date();
     return d.toISOString().split('T')[0];
   });
+  const [novoGanhoOutroData, setNovoGanhoOutroData] = useState(() => {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  });
+  
   const [novoGanhoApp, setNovoGanhoApp] = useState('Uber');
-  const [novoGanhoValor, setNovoGanhoValor] = useState(0);
+  const [novoGanhoAppValor, setNovoGanhoAppValor] = useState(0);
+
+  const [novoGanhoOutroDesc, setNovoGanhoOutroDesc] = useState('');
+  const [novoGanhoOutroValor, setNovoGanhoOutroValor] = useState(0);
 
   // Config
   const entradaBruta = ganhosDiarios.reduce((acc, ganho) => acc + ganho.valor, 0);
@@ -44,27 +52,43 @@ export default function App() {
 
   // Casa
   const [casaAluguel, setCasaAluguel] = useState(950.00);
+  const [casaAluguelDia, setCasaAluguelDia] = useState(29);
   const [casaConect, setCasaConect] = useState(79.99);
+  const [casaConectDia, setCasaConectDia] = useState(20);
   const [casaVivo, setCasaVivo] = useState(53.00);
+  const [casaVivoDia, setCasaVivoDia] = useState(10);
   const [casaTim, setCasaTim] = useState(20.00);
+  const [casaTimDia, setCasaTimDia] = useState(10);
   const [casaPensao, setCasaPensao] = useState(729.45);
+  const [casaPensaoDia, setCasaPensaoDia] = useState(10);
   const [casaBarbeiro, setCasaBarbeiro] = useState(105.00);
+  const [casaBarbeiroDia, setCasaBarbeiroDia] = useState(5);
   const [casaCompra, setCasaCompra] = useState(850.00);
+  const [casaCompraDia, setCasaCompraDia] = useState(7);
   const [casaLuz, setCasaLuz] = useState(169.44);
+  const [casaLuzDia, setCasaLuzDia] = useState(15);
 
   // Moto
   const [motoParcela, setMotoParcela] = useState(980.00);
+  const [motoParcelaDia, setMotoParcelaDia] = useState(5);
   const [motoPrestacao, setMotoPrestacao] = useState(1093.55);
+  const [motoPrestacaoDia, setMotoPrestacaoDia] = useState(8);
   const [motoSeguro, setMotoSeguro] = useState(175.20);
+  const [motoSeguroDia, setMotoSeguroDia] = useState(20);
   const [motoLitrosSemana, setMotoLitrosSemana] = useState(12);
   const [motoPrecoLitro, setMotoPrecoLitro] = useState(6.50);
   const motoCombustivel = motoLitrosSemana * 4 * motoPrecoLitro;
+  const [motoCombustivelDia, setMotoCombustivelDia] = useState(30);
   const [motoOleo, setMotoOleo] = useState(59.90);
+  const [motoOleoDia, setMotoOleoDia] = useState(30);
   const [motoFiltro, setMotoFiltro] = useState(16.90);
+  const [motoFiltroDia, setMotoFiltroDia] = useState(30);
 
   // Crédito
   const [cartaoNubank, setCartaoNubank] = useState(139.98);
+  const [cartaoNubankDia, setCartaoNubankDia] = useState(10);
   const [lisePrincipal, setLisePrincipal] = useState(410.00);
+  const [liseSantanderDia, setLiseSantanderDia] = useState(15);
   const [liseJurosPct, setLiseJurosPct] = useState(8.00);
   const [liseDias, setLiseDias] = useState(14);
   const [liseIof, setLiseIof] = useState(3.10);
@@ -95,19 +119,35 @@ export default function App() {
   const saldoFinal = entradaLiquida - totalCustosGerais;
   const inProfit = saldoFinal >= 0;
 
-  const adicionarGanhoDoDia = () => {
-    if (!novoGanhoData || novoGanhoValor <= 0) {
-      alert("Preencha todos os campos do aplicativo!");
+  const adicionarGanhoApp = () => {
+    if (!novoGanhoAppData || novoGanhoAppValor <= 0) {
+      alert("Preencha o valor do aplicativo!");
       return;
     }
     const novo: GanhoDiario = {
       id: Math.random().toString(36).substr(2, 9),
-      data: novoGanhoData,
+      data: novoGanhoAppData,
       app: novoGanhoApp,
-      valor: novoGanhoValor
+      valor: novoGanhoAppValor
     };
     setGanhosDiarios([novo, ...ganhosDiarios]);
-    setNovoGanhoValor(0);
+    setNovoGanhoAppValor(0);
+  };
+
+  const adicionarGanhoOutro = () => {
+    if (!novoGanhoOutroData || novoGanhoOutroValor <= 0 || !novoGanhoOutroDesc.trim()) {
+      alert("Preencha a descrição e o valor da entrada!");
+      return;
+    }
+    const novo: GanhoDiario = {
+      id: Math.random().toString(36).substr(2, 9),
+      data: novoGanhoOutroData,
+      app: novoGanhoOutroDesc,
+      valor: novoGanhoOutroValor
+    };
+    setGanhosDiarios([novo, ...ganhosDiarios]);
+    setNovoGanhoOutroValor(0);
+    setNovoGanhoOutroDesc('');
   };
 
   const deletarGanho = (id: string) => {
@@ -116,22 +156,22 @@ export default function App() {
 
   const hoje = new Date();
   const listaGastos = [
-    { id: 'moto_prestacao', nome: 'Parcela da Moto', valorTotal: motoPrestacao, diaVencimento: 7 },
-    { id: 'casa_aluguel', nome: 'Aluguel', valorTotal: casaAluguel, diaVencimento: 29 },
-    { id: 'casa_conect', nome: 'Conect', valorTotal: casaConect, diaVencimento: 20 },
-    { id: 'casa_vivo', nome: 'Vivo', valorTotal: casaVivo, diaVencimento: 10 },
-    { id: 'casa_tim', nome: 'Tim', valorTotal: casaTim, diaVencimento: 10 },
-    { id: 'casa_pensao', nome: 'Pensão', valorTotal: casaPensao, diaVencimento: 10 },
-    { id: 'casa_barbeiro', nome: 'Barbeiro', valorTotal: casaBarbeiro, diaVencimento: 5 },
-    { id: 'casa_compra', nome: 'Compra Mês', valorTotal: casaCompra, diaVencimento: 7 },
-    { id: 'casa_luz', nome: 'Luz', valorTotal: casaLuz, diaVencimento: 15 },
-    { id: 'moto_seguro', nome: 'Seguro Moto', valorTotal: motoSeguro, diaVencimento: 20 },
-    { id: 'cartao_nubank', nome: 'Nubank Fatura', valorTotal: cartaoNubank, diaVencimento: 10 },
-    { id: 'lise_santander', nome: 'Santander Lise', valorTotal: lisePrincipal + totalEncargosLise, diaVencimento: 15 },
-    { id: 'moto_parcela_entrada', nome: 'Parcela Entrada Moto', valorTotal: motoParcela, diaVencimento: 5 },
-    { id: 'moto_combustivel', nome: 'Combustível', valorTotal: motoCombustivel, diaVencimento: 30 },
-    { id: 'moto_oleo', nome: 'Troca de Óleo', valorTotal: motoOleo, diaVencimento: 30 },
-    { id: 'moto_filtro', nome: 'Filtro Moto', valorTotal: motoFiltro, diaVencimento: 30 }
+    { id: 'moto_prestacao', nome: 'Prestação Moto', valorTotal: motoPrestacao, diaVencimento: motoPrestacaoDia },
+    { id: 'casa_aluguel', nome: 'Aluguel', valorTotal: casaAluguel, diaVencimento: casaAluguelDia },
+    { id: 'casa_conect', nome: 'Conect', valorTotal: casaConect, diaVencimento: casaConectDia },
+    { id: 'casa_vivo', nome: 'Vivo', valorTotal: casaVivo, diaVencimento: casaVivoDia },
+    { id: 'casa_tim', nome: 'Tim', valorTotal: casaTim, diaVencimento: casaTimDia },
+    { id: 'casa_pensao', nome: 'Pensão', valorTotal: casaPensao, diaVencimento: casaPensaoDia },
+    { id: 'casa_barbeiro', nome: 'Barbeiro', valorTotal: casaBarbeiro, diaVencimento: casaBarbeiroDia },
+    { id: 'casa_compra', nome: 'Compra Mês', valorTotal: casaCompra, diaVencimento: casaCompraDia },
+    { id: 'casa_luz', nome: 'Luz', valorTotal: casaLuz, diaVencimento: casaLuzDia },
+    { id: 'moto_seguro', nome: 'Seguro Moto', valorTotal: motoSeguro, diaVencimento: motoSeguroDia },
+    { id: 'cartao_nubank', nome: 'Nubank Fatura', valorTotal: cartaoNubank, diaVencimento: cartaoNubankDia },
+    { id: 'lise_santander', nome: 'Santander Lise', valorTotal: lisePrincipal + totalEncargosLise, diaVencimento: liseSantanderDia },
+    { id: 'moto_parcela_entrada', nome: 'Parcela Entrada', valorTotal: motoParcela, diaVencimento: motoParcelaDia },
+    { id: 'moto_combustivel', nome: 'Combustível', valorTotal: motoCombustivel, diaVencimento: motoCombustivelDia },
+    { id: 'moto_oleo', nome: 'Troca de Óleo', valorTotal: motoOleo, diaVencimento: motoOleoDia },
+    { id: 'moto_filtro', nome: 'Filtro Moto', valorTotal: motoFiltro, diaVencimento: motoFiltroDia }
   ].filter(g => g.valorTotal > 0);
 
   const gastosCascata = listaGastos.map(gasto => {
@@ -263,6 +303,19 @@ export default function App() {
     );
   };
 
+
+  const ExpenseInput = ({ label, valor, onChangeValor, dia, onChangeDia, isReadOnly = false }: any) => (
+    <div className="flex gap-2 w-full">
+      <div className="flex-[2]">
+        <InputField label={label} value={valor} onChange={onChangeValor} readOnly={isReadOnly} />
+      </div>
+      {dia !== undefined && (
+        <div className="flex-[1] min-w-[70px]">
+          <InputField label="Dia" value={dia} onChange={onChangeDia} formatType="integer" />
+        </div>
+      )}
+    </div>
+  );
 
   const executarLoginComum = () => {
     if (!authEmail) {
@@ -411,37 +464,79 @@ export default function App() {
                 <PlusCircle className="w-5 h-5" />
                 Lançamento Diário de Ganhos
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-                <div className="flex flex-col">
-                  <label className="text-xs text-[#8a99ad] mb-1 font-medium">Data (DD/MM/AAAA)</label>
-                  <input 
-                    type="date" 
-                    value={novoGanhoData}
-                    onChange={(e) => setNovoGanhoData(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-end relative mt-2">
+                {/* Apps */}
+                  <div className="bg-[#141c2f]/70 border border-[#00ffcc]/20 rounded-xl p-4 backdrop-blur-md relative">
+                   <h3 className="text-[13px] font-bold text-[#00ffcc] mb-3 uppercase tracking-wider flex items-center gap-2">
+                     <CarFront className="w-4 h-4" /> Entradas de Apps
+                   </h3>
+                   <div className="flex flex-col gap-3">
+                     <div className="flex flex-col">
+                       <label className="text-xs text-[#8a99ad] mb-[4px] font-medium">Data</label>
+                       <input 
+                         type="date" 
+                         value={novoGanhoAppData}
+                         onChange={(e) => setNovoGanhoAppData(e.target.value)}
+                         className="w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
+                       />
+                     </div>
+                     <div className="flex flex-col">
+                       <label className="text-xs text-[#8a99ad] mb-[4px] font-medium">Aplicativo</label>
+                       <select 
+                         value={novoGanhoApp}
+                         onChange={(e) => setNovoGanhoApp(e.target.value)}
+                         className="w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
+                       >
+                         <option value="iFood">iFood</option>
+                         <option value="Uber">Uber</option>
+                         <option value="99 Food">99 Food</option>
+                         <option value="99 Passageiro">99 Passageiro</option>
+                       </select>
+                     </div>
+                     <InputField label="Valor Feito (R$)" value={novoGanhoAppValor} onChange={setNovoGanhoAppValor} />
+                     <button 
+                       onClick={adicionarGanhoApp}
+                       className="w-full bg-gradient-to-r from-[#0077ff] to-[#00ffcc] border-none rounded-lg text-black p-2.5 font-bold cursor-pointer hover:shadow-[0_0_15px_rgba(0,255,204,0.4)] transition-all flex items-center justify-center text-xs uppercase tracking-wide mt-2"
+                     >
+                       Injetar Saldo App
+                     </button>
+                   </div>
                 </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-[#8a99ad] mb-1 font-medium">Origem / App</label>
-                  <select 
-                    value={novoGanhoApp}
-                    onChange={(e) => setNovoGanhoApp(e.target.value)}
-                    className="w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
-                  >
-                    <option value="iFood">iFood</option>
-                    <option value="Uber">Uber</option>
-                    <option value="99 Food">99 Food</option>
-                    <option value="99 Passageiro">99 Passageiro</option>
-                    <option value="Outros">Outras Fontes</option>
-                  </select>
+
+                {/* Outros */}
+                <div className="bg-[#141c2f]/70 border border-[#ff0055]/20 rounded-xl p-4 backdrop-blur-md relative">
+                   <h3 className="text-[13px] font-bold text-[#ff0055] mb-3 uppercase tracking-wider flex items-center gap-2">
+                     <Wallet className="w-4 h-4" /> Outras Entradas
+                   </h3>
+                   <div className="flex flex-col gap-3">
+                     <div className="flex flex-col">
+                       <label className="text-xs text-[#8a99ad] mb-[4px] font-medium">Data</label>
+                       <input 
+                         type="date" 
+                         value={novoGanhoOutroData}
+                         onChange={(e) => setNovoGanhoOutroData(e.target.value)}
+                         className="w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
+                       />
+                     </div>
+                     <div className="flex flex-col">
+                        <label className="text-xs text-[#8a99ad] mb-[4px] font-medium">Descrição da Entrada</label>
+                        <input 
+                          type="text"
+                          placeholder="Bico, Venda..."
+                          value={novoGanhoOutroDesc}
+                          onChange={(e) => setNovoGanhoOutroDesc(e.target.value)}
+                          className="w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
+                        />
+                     </div>
+                     <InputField label="Valor (R$)" value={novoGanhoOutroValor} onChange={setNovoGanhoOutroValor} />
+                     <button 
+                       onClick={adicionarGanhoOutro}
+                       className="w-full bg-gradient-to-r from-[#ff0055] to-[#ff6699] border-none rounded-lg text-white p-2.5 font-bold cursor-pointer hover:shadow-[0_0_15px_rgba(255,0,85,0.4)] transition-all flex items-center justify-center text-xs uppercase tracking-wide mt-2"
+                     >
+                       Injetar Saldo Extra
+                     </button>
+                   </div>
                 </div>
-                <InputField label="Valor Feito (R$)" value={novoGanhoValor} onChange={setNovoGanhoValor} />
-                <button 
-                  onClick={adicionarGanhoDoDia}
-                  className="w-full bg-gradient-to-r from-[#0077ff] to-[#00ffcc] border-none rounded-lg text-black p-2 font-bold cursor-pointer hover:shadow-[0_0_15px_rgba(0,255,204,0.4)] transition-all h-[38px] flex items-center justify-center text-xs sm:text-sm uppercase tracking-wide"
-                >
-                  Injetar Saldo
-                </button>
               </div>
 
               {ganhosDiarios.length > 0 && (
@@ -602,15 +697,15 @@ export default function App() {
                 <Home className="w-5 h-5" />
                 Gastos Fixos de Casa
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-4">
-                <InputField label="Aluguel (29)" value={casaAluguel} onChange={setCasaAluguel} />
-                <InputField label="Conect (20)" value={casaConect} onChange={setCasaConect} />
-                <InputField label="Vivo (10)" value={casaVivo} onChange={setCasaVivo} />
-                <InputField label="Tim" value={casaTim} onChange={setCasaTim} />
-                <InputField label="Pensão (10)" value={casaPensao} onChange={setCasaPensao} />
-                <InputField label="Barbeiro (5)" value={casaBarbeiro} onChange={setCasaBarbeiro} />
-                <InputField label="Compra Mês (7)" value={casaCompra} onChange={setCasaCompra} />
-                <InputField label="Luz (15)" value={casaLuz} onChange={setCasaLuz} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-4">
+                <ExpenseInput label="Aluguel" valor={casaAluguel} onChangeValor={setCasaAluguel} dia={casaAluguelDia} onChangeDia={setCasaAluguelDia} />
+                <ExpenseInput label="Conect" valor={casaConect} onChangeValor={setCasaConect} dia={casaConectDia} onChangeDia={setCasaConectDia} />
+                <ExpenseInput label="Vivo" valor={casaVivo} onChangeValor={setCasaVivo} dia={casaVivoDia} onChangeDia={setCasaVivoDia} />
+                <ExpenseInput label="Tim" valor={casaTim} onChangeValor={setCasaTim} dia={casaTimDia} onChangeDia={setCasaTimDia} />
+                <ExpenseInput label="Pensão" valor={casaPensao} onChangeValor={setCasaPensao} dia={casaPensaoDia} onChangeDia={setCasaPensaoDia} />
+                <ExpenseInput label="Barbeiro" valor={casaBarbeiro} onChangeValor={setCasaBarbeiro} dia={casaBarbeiroDia} onChangeDia={setCasaBarbeiroDia} />
+                <ExpenseInput label="Compra Mês" valor={casaCompra} onChangeValor={setCasaCompra} dia={casaCompraDia} onChangeDia={setCasaCompraDia} />
+                <ExpenseInput label="Luz" valor={casaLuz} onChangeValor={setCasaLuz} dia={casaLuzDia} onChangeDia={setCasaLuzDia} />
               </div>
             </div>
 
@@ -620,15 +715,21 @@ export default function App() {
                 <CarFront className="w-5 h-5" />
                 Gastos com a Moto
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 sm:gap-4 mb-3">
-                 <InputField label="Parcela Entrada" value={motoParcela} onChange={setMotoParcela} />
-                 <InputField label="Prestação (8)" value={motoPrestacao} onChange={setMotoPrestacao} />
-                 <InputField label="Seguro (20)" value={motoSeguro} onChange={setMotoSeguro} />
-                 <InputField label="Litros (Semana)" value={motoLitrosSemana} onChange={setMotoLitrosSemana} formatType="integer" />
-                 <InputField label="Valor Litro (R$)" value={motoPrecoLitro} onChange={setMotoPrecoLitro} />
-                 <InputField label="Combustível (Mês)" value={motoCombustivel} readOnly highlight />
-                 <InputField label="Óleo Yamalube" value={motoOleo} onChange={setMotoOleo} />
-                 <InputField label="Filtro Moto" value={motoFiltro} onChange={setMotoFiltro} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-4 mb-3">
+                 <ExpenseInput label="Parcela Entrada" valor={motoParcela} onChangeValor={setMotoParcela} dia={motoParcelaDia} onChangeDia={setMotoParcelaDia} />
+                 <ExpenseInput label="Prestação Moto" valor={motoPrestacao} onChangeValor={setMotoPrestacao} dia={motoPrestacaoDia} onChangeDia={setMotoPrestacaoDia} />
+                 <ExpenseInput label="Seguro Moto" valor={motoSeguro} onChangeValor={setMotoSeguro} dia={motoSeguroDia} onChangeDia={setMotoSeguroDia} />
+                 <ExpenseInput label="Óleo Yamalube" valor={motoOleo} onChangeValor={setMotoOleo} dia={motoOleoDia} onChangeDia={setMotoOleoDia} />
+                 <ExpenseInput label="Filtro Moto" valor={motoFiltro} onChangeValor={setMotoFiltro} dia={motoFiltroDia} onChangeDia={setMotoFiltroDia} />
+                 
+                 <div className="col-span-1 sm:col-span-2 bg-[#141828]/50 p-4 rounded-xl border border-white/5 mt-2">
+                    <h3 className="text-sm font-bold text-[#f5f5f7] mb-3">Calculadora de Combustível</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                       <InputField label="Litros/Semana" value={motoLitrosSemana} onChange={setMotoLitrosSemana} formatType="integer" />
+                       <InputField label="Valor Litro" value={motoPrecoLitro} onChange={setMotoPrecoLitro} />
+                       <ExpenseInput label="Custo Mês" valor={motoCombustivel} isReadOnly={true} dia={motoCombustivelDia} onChangeDia={setMotoCombustivelDia} />
+                    </div>
+                 </div>
               </div>
               <p className="text-[#8a99ad] text-xs italic mt-4">* Combustível calculado: (Litros/semana × 4 semanas) × Valor Litro.</p>
             </div>
@@ -643,13 +744,13 @@ export default function App() {
                 <CreditCard className="w-5 h-5" />
                 Cartão Nubank & Lise Santander
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 sm:gap-4">
-                <InputField label="Nubank Fatura" value={cartaoNubank} onChange={setCartaoNubank} />
-                <InputField label="Santander Lise (Uso)" value={lisePrincipal} onChange={setLisePrincipal} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-4">
+                <ExpenseInput label="Nubank Fatura" valor={cartaoNubank} onChangeValor={setCartaoNubank} dia={cartaoNubankDia} onChangeDia={setCartaoNubankDia} />
+                <ExpenseInput label="Santander Lise Total" valor={lisePrincipal + totalEncargosLise} isReadOnly={true} dia={liseSantanderDia} onChangeDia={setLiseSantanderDia} />
+                <InputField label="Lise Saque Principal" value={lisePrincipal} onChange={setLisePrincipal} />
                 <InputField label="Juros Lise (Mês %)" value={liseJurosPct} onChange={setLiseJurosPct} />
-                <InputField label="Dias de Uso Lise" value={liseDias} onChange={setLiseDias} />
+                <InputField label="Dias de Uso Lise" value={liseDias} onChange={setLiseDias} formatType="integer" />
                 <InputField label="IOF Fixo R$" value={liseIof} onChange={setLiseIof} />
-                <InputField label="Total Encargos Lise" value={totalEncargosLise.toFixed(2)} readOnly highlight />
               </div>
               <p className="text-[#8a99ad] text-xs italic mt-6">* A fatura do Nubank é atualizada automaticamente com base no mês de referência na aba de configurações.</p>
             </div>
