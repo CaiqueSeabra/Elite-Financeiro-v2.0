@@ -27,7 +27,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // Ganhos Diários
-  const [ganhosDiarios, setGanhosDiarios] = useState<GanhoDiario[]>([]);
+  const [ganhosDiarios, setGanhosDiarios] = useState<GanhoDiario[]>([
+    { id: 'initial-ifood-saldo', data: (() => { const d = new Date(); return d.toISOString().split('T')[0]; })(), app: 'iFood', valor: 414.31 }
+  ]);
   const [novoGanhoData, setNovoGanhoData] = useState(() => {
     const d = new Date();
     return d.toISOString().split('T')[0];
@@ -109,6 +111,48 @@ export default function App() {
   const deletarGanho = (id: string) => {
     setGanhosDiarios(ganhosDiarios.filter(g => g.id !== id));
   };
+
+  const hoje = new Date();
+  const listaGastos = [
+    { id: 'moto_prestacao', nome: 'Parcela da Moto', valorTotal: motoPrestacao, diaVencimento: 7 },
+    { id: 'casa_aluguel', nome: 'Aluguel', valorTotal: casaAluguel, diaVencimento: 29 },
+    { id: 'casa_conect', nome: 'Conect', valorTotal: casaConect, diaVencimento: 20 },
+    { id: 'casa_vivo', nome: 'Vivo', valorTotal: casaVivo, diaVencimento: 10 },
+    { id: 'casa_tim', nome: 'Tim', valorTotal: casaTim, diaVencimento: 10 },
+    { id: 'casa_pensao', nome: 'Pensão', valorTotal: casaPensao, diaVencimento: 10 },
+    { id: 'casa_barbeiro', nome: 'Barbeiro', valorTotal: casaBarbeiro, diaVencimento: 5 },
+    { id: 'casa_compra', nome: 'Compra Mês', valorTotal: casaCompra, diaVencimento: 7 },
+    { id: 'casa_luz', nome: 'Luz', valorTotal: casaLuz, diaVencimento: 15 },
+    { id: 'moto_seguro', nome: 'Seguro Moto', valorTotal: motoSeguro, diaVencimento: 20 },
+    { id: 'cartao_nubank', nome: 'Nubank Fatura', valorTotal: cartaoNubank, diaVencimento: 10 },
+    { id: 'lise_santander', nome: 'Santander Lise', valorTotal: lisePrincipal + totalEncargosLise, diaVencimento: 15 },
+    { id: 'moto_parcela_entrada', nome: 'Parcela Entrada Moto', valorTotal: motoParcela, diaVencimento: 5 },
+    { id: 'moto_combustivel', nome: 'Combustível', valorTotal: motoCombustivel, diaVencimento: 30 },
+    { id: 'moto_oleo', nome: 'Troca de Óleo', valorTotal: motoOleo, diaVencimento: 30 },
+    { id: 'moto_filtro', nome: 'Filtro Moto', valorTotal: motoFiltro, diaVencimento: 30 }
+  ].filter(g => g.valorTotal > 0);
+
+  const gastosCascata = listaGastos.map(gasto => {
+     let dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth(), gasto.diaVencimento);
+     if (dataVencimento < hoje) {
+        dataVencimento.setMonth(dataVencimento.getMonth() + 1);
+     }
+     let diferencaTempo = dataVencimento.getTime() - hoje.getTime();
+     let faltaDias = Math.ceil(diferencaTempo / (1000 * 60 * 60 * 24));
+     if (faltaDias <= 0) faltaDias = 1;
+     return { ...gasto, dataVencimento, faltaDias, valorPago: 0 };
+  }).sort((a, b) => a.faltaDias - b.faltaDias);
+
+  let saldoCascata = entradaLiquida;
+  gastosCascata.forEach(gasto => {
+      if (saldoCascata >= gasto.valorTotal) {
+          gasto.valorPago = gasto.valorTotal;
+          saldoCascata -= gasto.valorTotal;
+      } else {
+          gasto.valorPago = saldoCascata;
+          saldoCascata = 0;
+      }
+  });
 
   const formatCurrency = (val: number) => {
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -382,18 +426,19 @@ export default function App() {
                     onChange={(e) => setNovoGanhoApp(e.target.value)}
                     className="w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
                   >
-                    <option value="Uber">Uber</option>
-                    <option value="99">99 App</option>
                     <option value="iFood">iFood</option>
-                    <option value="Outros">Outros</option>
+                    <option value="Uber">Uber</option>
+                    <option value="99 Food">99 Food</option>
+                    <option value="99 Passageiro">99 Passageiro</option>
+                    <option value="Outros">Outras Fontes</option>
                   </select>
                 </div>
                 <InputField label="Valor Feito (R$)" value={novoGanhoValor} onChange={setNovoGanhoValor} />
                 <button 
                   onClick={adicionarGanhoDoDia}
-                  className="w-full bg-gradient-to-r from-[#00ff66] to-[#00aa50] border-none rounded-lg text-black p-2 font-bold cursor-pointer hover:shadow-[0_0_15px_rgba(0,255,102,0.4)] transition-all h-[38px] flex items-center justify-center"
+                  className="w-full bg-gradient-to-r from-[#0077ff] to-[#00ffcc] border-none rounded-lg text-black p-2 font-bold cursor-pointer hover:shadow-[0_0_15px_rgba(0,255,204,0.4)] transition-all h-[38px] flex items-center justify-center text-xs sm:text-sm uppercase tracking-wide"
                 >
-                  Inserir
+                  Injetar Saldo
                 </button>
               </div>
 
@@ -457,25 +502,90 @@ export default function App() {
               </h2>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                <div className="bg-white/5 border-l-4 border-[#ff3366] p-4 rounded-md">
-                  <div className="text-xs text-[#8a99ad] font-medium">Total Custo Operacional</div>
+                <div className="bg-white/5 border-l-4 border-[#ff0055] p-4 rounded-md">
+                  <div className="text-xs text-[#8a99ad] font-medium uppercase tracking-wide">Total Custo Operacional</div>
                   <div className="text-xl font-bold mt-1 text-white">{formatCurrency(totalCustosGerais)}</div>
                 </div>
-                <div className="bg-white/5 border-l-4 border-[#00ff66] p-4 rounded-md">
-                  <div className="text-xs text-[#8a99ad] font-medium">Entrada Líquida Atual</div>
-                  <div className="text-xl font-bold mt-1 text-[#00ff66]">{formatCurrency(entradaLiquida)}</div>
+                <div className="bg-white/5 border-l-4 border-[#00ffcc] p-4 rounded-md">
+                  <div className="text-xs text-[#8a99ad] font-medium uppercase tracking-wide">Entrada Líquida Atual</div>
+                  <div className="text-xl font-bold mt-1 text-[#00ffcc]">{formatCurrency(entradaLiquida)}</div>
                 </div>
               </div>
 
-              <div className={cn("bg-white/5 border-l-4 p-4 rounded-md", inProfit ? "border-[#00ff66]" : "border-[#ff3366]")}>
-                 <div className="text-xs text-[#8a99ad] font-medium">Resultado Atual para Alcançar a Meta</div>
-                 <div className={cn("text-xl font-bold mt-1", inProfit ? "text-[#00ff66]" : "text-[#ff3366]")}>
+              <div className="bg-white/5 p-4 rounded-md mb-3 border border-white/10">
+                <div className="flex justify-between text-xs text-[#8a99ad] font-medium mb-2 uppercase tracking-wide">
+                  <span>Progresso da Meta</span>
+                  <span>{Math.min(100, Math.round((entradaLiquida / (totalCustosGerais || 1)) * 100))}%</span>
+                </div>
+                <div className="w-full bg-black/40 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#0077ff] to-[#00ffcc] transition-all duration-500 ease-in-out" 
+                    style={{ width: `${Math.min(100, Math.max(0, (entradaLiquida / (totalCustosGerais || 1)) * 100))}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className={cn("bg-white/5 border-l-4 p-4 rounded-md", inProfit ? "border-[#00ffcc]" : "border-[#ff0055]")}>
+                 <div className="text-xs text-[#8a99ad] font-medium uppercase tracking-wide">Resultado Atual para Alcançar a Meta</div>
+                 <div className={cn("text-xl font-bold mt-1", inProfit ? "text-[#00ffcc]" : "text-[#ff0055]")}>
                    {inProfit ? (
-                     <span className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5" /> Meta Atingida! Lucro Líquido: {formatCurrency(saldoFinal)}</span>
+                     <span className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5" /> Meta Atingida! Lucro: {formatCurrency(saldoFinal)}</span>
                    ) : (
-                     <span className="flex items-center gap-2"><AlertCircle className="w-5 h-5" /> Faltam {formatCurrency(Math.abs(saldoFinal))} p/ o Ponto de Equilíbrio</span>
+                     <span className="flex items-center gap-2"><AlertCircle className="w-5 h-5" /> Faltam {formatCurrency(Math.abs(saldoFinal))}</span>
                    )}
                  </div>
+              </div>
+
+              {/* Progressão de Vencimentos */}
+              <h3 className="text-md font-bold text-[#0077ff] uppercase tracking-wide mb-3 mt-6 border-b border-white/10 pb-2">
+                Ponto de Equilíbrio / Vencimentos
+              </h3>
+              
+              <div className="space-y-3">
+                {gastosCascata.map((gasto) => {
+                  let faltaValor = gasto.valorTotal - gasto.valorPago;
+                  if (faltaValor < 0) faltaValor = 0;
+
+                  let porcentagemAtingida = (gasto.valorPago / gasto.valorTotal) * 100;
+                  if (porcentagemAtingida > 100) porcentagemAtingida = 100;
+                  let porcentagemFalta = 100 - porcentagemAtingida;
+                  
+                  let metaDiaria = faltaValor / gasto.faltaDias;
+                  
+                  let corBorda = faltaValor === 0 ? '#00ffcc' : (gasto.faltaDias <= 5 ? '#ff0055' : 'rgba(255,255,255,0.1)');
+
+                  return (
+                    <div key={gasto.id} className="bg-[#141c2f]/70 border border-white/5 rounded-xl p-4 backdrop-blur-md relative overflow-hidden" style={{ borderLeft: `4px solid ${corBorda}` }}>
+                        <div className="flex justify-between items-center font-bold text-[1.05rem] mb-2">
+                            <span>{gasto.nome}</span>
+                            <span className="text-[#8a99ad] text-sm">
+                                R$ {gasto.valorPago.toFixed(2)} / <span className="text-white">R$ {gasto.valorTotal.toFixed(2)}</span>
+                            </span>
+                        </div>
+                        
+                        <div className="text-sm mt-2">
+                            {faltaValor === 0 ? (
+                                <span className="text-[#00ffcc] font-bold">✓ Ponto de equilíbrio atingido!</span>
+                            ) : (
+                                <span>Falta <b className="text-[#ff0055]">R$ {faltaValor.toFixed(2)}</b> ({porcentagemFalta.toFixed(0)}%) até o vencimento.</span>
+                            )}
+                        </div>
+
+                        {faltaValor > 0 && (
+                            <div className="text-xs text-[#8a99ad] mt-1.5">
+                                Meta necessária nos apps: <b className="text-white">R$ {metaDiaria.toFixed(2)}/dia</b> ({gasto.faltaDias} dias restantes)
+                            </div>
+                        )}
+
+                        <div className="w-full bg-black/40 h-1.5 mt-3 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-[#0077ff] to-[#00ffcc] transition-all duration-500" 
+                              style={{ width: `${porcentagemAtingida}%` }}
+                            />
+                        </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
