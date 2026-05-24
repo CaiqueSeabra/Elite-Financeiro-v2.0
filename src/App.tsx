@@ -56,7 +56,9 @@ export default function App() {
   const [motoParcela, setMotoParcela] = useState(980.00);
   const [motoPrestacao, setMotoPrestacao] = useState(1093.55);
   const [motoSeguro, setMotoSeguro] = useState(175.20);
-  const [motoCombustivel, setMotoCombustivel] = useState(312.00);
+  const [motoLitrosSemana, setMotoLitrosSemana] = useState(12);
+  const [motoPrecoLitro, setMotoPrecoLitro] = useState(6.50);
+  const motoCombustivel = motoLitrosSemana * 4 * motoPrecoLitro;
   const [motoOleo, setMotoOleo] = useState(59.90);
   const [motoFiltro, setMotoFiltro] = useState(16.90);
 
@@ -622,11 +624,13 @@ export default function App() {
                  <InputField label="Parcela Entrada" value={motoParcela} onChange={setMotoParcela} />
                  <InputField label="Prestação (8)" value={motoPrestacao} onChange={setMotoPrestacao} />
                  <InputField label="Seguro (20)" value={motoSeguro} onChange={setMotoSeguro} />
-                 <InputField label="Combustível (Mês)" value={motoCombustivel} onChange={setMotoCombustivel} />
+                 <InputField label="Litros (Semana)" value={motoLitrosSemana} onChange={setMotoLitrosSemana} formatType="integer" />
+                 <InputField label="Valor Litro (R$)" value={motoPrecoLitro} onChange={setMotoPrecoLitro} />
+                 <InputField label="Combustível (Mês)" value={motoCombustivel} readOnly highlight />
                  <InputField label="Óleo Yamalube" value={motoOleo} onChange={setMotoOleo} />
                  <InputField label="Filtro Moto" value={motoFiltro} onChange={setMotoFiltro} />
               </div>
-              <p className="text-[#8a99ad] text-xs italic mt-4">* Combustível baseado em R$6,50/L no Posto Shell (12L por semana).</p>
+              <p className="text-[#8a99ad] text-xs italic mt-4">* Combustível calculado: (Litros/semana × 4 semanas) × Valor Litro.</p>
             </div>
           </div>
         )}
