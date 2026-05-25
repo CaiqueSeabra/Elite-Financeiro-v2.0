@@ -17,6 +17,93 @@ const faturasNubank: Record<string, number> = {
   outubro: 0.00
 };
 
+const formatCurrency = (val: number) => {
+  return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
+
+const InputField = ({ label, value, onChange, readOnly = false, highlight = false, formatType: overrideFormatType }: any) => {
+  let formatType = overrideFormatType || 'currency';
+  if (label.includes('%')) formatType = 'percentage';
+  if (label.includes('Dias')) formatType = 'integer';
+
+  const numericValue = typeof value === 'string' ? parseFloat(value) : (value || 0);
+
+  const formatValue = (val: number) => {
+    if (isNaN(val) || val === 0) return '';
+    if (formatType === 'currency') {
+       let v = val.toFixed(2).replace(".", ",");
+       v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+       return v;
+    }
+    return val.toString(); 
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+     const raw = e.target.value;
+     
+     if (raw === '') {
+       onChange && onChange(0);
+       return;
+     }
+
+     if (formatType === 'currency') {
+       const digits = raw.replace(/\D/g, '');
+       const num = parseInt(digits || '0', 10) / 100;
+       onChange && onChange(isNaN(num) ? 0 : num);
+     } else if (formatType === 'percentage' || formatType === 'integer') {
+       const cleaned = raw.replace(/[^\d.-]/g, '');
+       onChange && onChange(parseFloat(cleaned) || 0);
+     } else {
+       const cleaned = raw.replace(',', '.').replace(/[^\d.-]/g, '');
+       onChange && onChange(parseFloat(cleaned) || 0);
+     }
+  };
+
+  const inputValue = formatValue(numericValue);
+  const showPrefix = formatType === 'currency';
+  const showSuffix = formatType === 'percentage';
+
+  return (
+    <div className="flex flex-col w-full relative">
+      <label className="text-xs text-[#8a99ad] mb-1 font-medium flex justify-between items-center">
+        {label}
+      </label>
+      <div className="relative group flex items-center">
+        {showPrefix && <span className="absolute left-3 text-[#8a99ad] text-sm font-medium z-10 transition-opacity duration-200">R$</span>}
+        <input 
+          type="text"
+          inputMode={formatType === 'currency' ? 'numeric' : 'decimal'}
+          value={inputValue}
+          onChange={readOnly ? undefined : handleChange}
+          readOnly={readOnly}
+          placeholder={formatType === 'currency' ? "0,00" : "0"}
+          className={cn(
+            "w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]",
+            showPrefix ? "pl-9" : "",
+            showSuffix ? "pr-8" : "",
+            readOnly ? "bg-black/40 text-slate-400 cursor-not-allowed border-transparent" : "hover:border-white/20",
+            highlight && "text-[#ff0055] font-bold"
+          )}
+        />
+        {showSuffix && <span className="absolute right-3 text-[#8a99ad] text-sm font-medium z-10">%</span>}
+      </div>
+    </div>
+  );
+};
+
+const ExpenseInput = ({ label, valor, onChangeValor, dia, onChangeDia, isReadOnly = false }: any) => (
+  <div className="flex gap-2 w-full">
+    <div className="flex-[2]">
+      <InputField label={label} value={valor} onChange={onChangeValor} readOnly={isReadOnly} />
+    </div>
+    {dia !== undefined && (
+      <div className="flex-[1] min-w-[70px]">
+        <InputField label="Dia" value={dia} onChange={onChangeDia} formatType="integer" />
+      </div>
+    )}
+  </div>
+);
+
 export default function App() {
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -196,93 +283,7 @@ export default function App() {
       }
   });
 
-  const formatCurrency = (val: number) => {
-    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
 
-  const InputField = ({ label, value, onChange, readOnly = false, highlight = false, formatType: overrideFormatType }: any) => {
-    let formatType = overrideFormatType || 'currency';
-    if (label.includes('%')) formatType = 'percentage';
-    if (label.includes('Dias')) formatType = 'integer';
-
-    const numericValue = typeof value === 'string' ? parseFloat(value) : (value || 0);
-
-    const formatValue = (val: number) => {
-      if (isNaN(val) || val === 0) return '';
-      if (formatType === 'currency') {
-         let v = val.toFixed(2).replace(".", ",");
-         v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
-         return v;
-      }
-      return val.toString(); 
-    };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-       const raw = e.target.value;
-       
-       if (raw === '') {
-         onChange && onChange(0);
-         return;
-       }
-
-       if (formatType === 'currency') {
-         const digits = raw.replace(/\D/g, '');
-         const num = parseInt(digits || '0', 10) / 100;
-         onChange && onChange(isNaN(num) ? 0 : num);
-       } else if (formatType === 'percentage' || formatType === 'integer') {
-         const cleaned = raw.replace(/[^\d.-]/g, '');
-         onChange && onChange(parseFloat(cleaned) || 0);
-       } else {
-         const cleaned = raw.replace(',', '.').replace(/[^\d.-]/g, '');
-         onChange && onChange(parseFloat(cleaned) || 0);
-       }
-    };
-
-    const inputValue = formatValue(numericValue);
-    const showPrefix = formatType === 'currency';
-    const showSuffix = formatType === 'percentage';
-
-    return (
-      <div className="flex flex-col w-full relative">
-        <label className="text-xs text-[#8a99ad] mb-1 font-medium flex justify-between items-center">
-          {label}
-        </label>
-        <div className="relative group flex items-center">
-          {showPrefix && <span className="absolute left-3 text-[#8a99ad] text-sm font-medium z-10 transition-opacity duration-200">R$</span>}
-          <input 
-            type="text"
-            inputMode={formatType === 'currency' ? 'numeric' : 'decimal'}
-            value={inputValue}
-            onChange={readOnly ? undefined : handleChange}
-            readOnly={readOnly}
-            placeholder={formatType === 'currency' ? "0,00" : "0"}
-            className={cn(
-              "w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]",
-              showPrefix ? "pl-9" : "",
-              showSuffix ? "pr-8" : "",
-              readOnly ? "bg-black/40 text-slate-400 cursor-not-allowed border-transparent" : "hover:border-white/20",
-              highlight && "text-[#ff0055] font-bold"
-            )}
-          />
-          {showSuffix && <span className="absolute right-3 text-[#8a99ad] text-sm font-medium z-10">%</span>}
-        </div>
-      </div>
-    );
-  };
-
-
-  const ExpenseInput = ({ label, valor, onChangeValor, dia, onChangeDia, isReadOnly = false }: any) => (
-    <div className="flex gap-2 w-full">
-      <div className="flex-[2]">
-        <InputField label={label} value={valor} onChange={onChangeValor} readOnly={isReadOnly} />
-      </div>
-      {dia !== undefined && (
-        <div className="flex-[1] min-w-[70px]">
-          <InputField label="Dia" value={dia} onChange={onChangeDia} formatType="integer" />
-        </div>
-      )}
-    </div>
-  );
 
   const executarLoginComum = () => {
     if (!authEmail) {
