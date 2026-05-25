@@ -200,17 +200,15 @@ export default function App() {
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const InputField = ({ label, value, onChange, readOnly = false, highlight = false }: any) => {
-    let formatType = 'currency';
+  const InputField = ({ label, value, onChange, readOnly = false, highlight = false, formatType: overrideFormatType }: any) => {
+    let formatType = overrideFormatType || 'currency';
     if (label.includes('%')) formatType = 'percentage';
     if (label.includes('Dias')) formatType = 'integer';
 
     const numericValue = typeof value === 'string' ? parseFloat(value) : (value || 0);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editValue, setEditValue] = useState(numericValue.toString());
 
     const formatValue = (val: number) => {
-      if (isNaN(val)) return '0';
+      if (isNaN(val) || val === 0) return '';
       if (formatType === 'currency') {
          let v = val.toFixed(2).replace(".", ",");
          v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
@@ -219,85 +217,54 @@ export default function App() {
       return val.toString(); 
     };
 
-    const handleEditClick = () => {
-       if (readOnly) return;
-       setIsEditing(true);
-       setEditValue(numericValue.toString());
-       setTimeout(() => {
-          document.getElementById(`input-${label.replace(/\s+/g, '-')}`)?.focus();
-       }, 50);
-    };
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+       const raw = e.target.value;
+       
+       if (raw === '') {
+         onChange && onChange(0);
+         return;
+       }
 
-    const handleBlur = () => {
-       setIsEditing(false);
-       if (editValue.trim() !== '') {
-          const parsed = parseFloat(editValue);
-          onChange && onChange(isNaN(parsed) ? 0 : parsed);
+       if (formatType === 'currency') {
+         const digits = raw.replace(/\D/g, '');
+         const num = parseInt(digits || '0', 10) / 100;
+         onChange && onChange(isNaN(num) ? 0 : num);
+       } else if (formatType === 'percentage' || formatType === 'integer') {
+         const cleaned = raw.replace(/[^\d.-]/g, '');
+         onChange && onChange(parseFloat(cleaned) || 0);
        } else {
-          onChange && onChange(0);
+         const cleaned = raw.replace(',', '.').replace(/[^\d.-]/g, '');
+         onChange && onChange(parseFloat(cleaned) || 0);
        }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        handleBlur();
-      }
-    };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-       setEditValue(e.target.value);
-    };
-
-    // Calculate display values based on mode
-    const inputValue = isEditing ? editValue : formatValue(numericValue);
-    const showPrefix = formatType === 'currency' && !isEditing;
-    const showSuffix = formatType === 'percentage' && !isEditing;
+    const inputValue = formatValue(numericValue);
+    const showPrefix = formatType === 'currency';
+    const showSuffix = formatType === 'percentage';
 
     return (
-      <div className="flex flex-col">
+      <div className="flex flex-col w-full relative">
         <label className="text-xs text-[#8a99ad] mb-1 font-medium flex justify-between items-center">
           {label}
         </label>
-        <div className="relative group">
-          {showPrefix && <span className="absolute left-3 top-2.5 text-[#8a99ad] text-sm font-medium z-10 transition-opacity duration-200">R$</span>}
+        <div className="relative group flex items-center">
+          {showPrefix && <span className="absolute left-3 text-[#8a99ad] text-sm font-medium z-10 transition-opacity duration-200">R$</span>}
           <input 
-            id={`input-${label.replace(/\s+/g, '-')}`}
-            type={isEditing ? "number" : "text"}
-            step={formatType === 'integer' ? "1" : "0.01"}
+            type="text"
+            inputMode={formatType === 'currency' ? 'numeric' : 'decimal'}
             value={inputValue}
             onChange={readOnly ? undefined : handleChange}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            onClick={!isEditing && !readOnly ? handleEditClick : undefined}
-            readOnly={readOnly || !isEditing}
+            readOnly={readOnly}
+            placeholder={formatType === 'currency' ? "0,00" : "0"}
             className={cn(
-              "w-full bg-white/5 border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]",
+              "w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]",
               showPrefix ? "pl-9" : "",
               showSuffix ? "pr-8" : "",
-              readOnly ? "bg-black/40 text-slate-400 cursor-not-allowed" : (!isEditing ? "cursor-pointer hover:bg-white/10" : "bg-[#141828]"),
-              highlight && "text-[#ff3366] bg-[#ff3366]/10 border-[#ff3366]/30 font-bold",
-              isEditing && "border-[#00e5ff] shadow-[0_0_8px_rgba(0,229,255,0.4)] [&::-webkit-inner-spin-button]:appearance-none"
+              readOnly ? "bg-black/40 text-slate-400 cursor-not-allowed border-transparent" : "hover:border-white/20",
+              highlight && "text-[#ff0055] font-bold"
             )}
           />
-          {showSuffix && <span className="absolute right-3 top-2.5 text-[#8a99ad] text-sm font-medium z-10">%</span>}
-          
-          {!readOnly && (
-            <button 
-              type="button"
-              onMouseDown={(e) => e.preventDefault()} // Prevent blur before click
-              onClick={(e) => {
-                e.preventDefault();
-                isEditing ? handleBlur() : handleEditClick();
-              }}
-              className={cn(
-                "absolute right-2 top-2 p-1 rounded-md transition-colors",
-                showSuffix ? "right-8" : "",
-                isEditing ? "text-[#00e5ff] bg-[#00e5ff]/10" : "text-[#8a99ad] opacity-60 hover:opacity-100 hover:text-white hover:bg-white/10"
-              )}
-            >
-              {isEditing ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
-            </button>
-          )}
+          {showSuffix && <span className="absolute right-3 text-[#8a99ad] text-sm font-medium z-10">%</span>}
         </div>
       </div>
     );
