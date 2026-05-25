@@ -28,6 +28,9 @@ const InputField = ({ label, value, onChange, readOnly = false, highlight = fals
 
   const numericValue = typeof value === 'string' ? parseFloat(value) : (value || 0);
 
+  const [isFocused, setIsFocused] = React.useState(false);
+  const [editValue, setEditValue] = React.useState('');
+
   const formatValue = (val: number) => {
     if (isNaN(val) || val === 0) return '';
     if (formatType === 'currency') {
@@ -38,30 +41,31 @@ const InputField = ({ label, value, onChange, readOnly = false, highlight = fals
     return val.toString(); 
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-     const raw = e.target.value;
-     
-     if (raw === '') {
-       onChange && onChange(0);
-       return;
-     }
-
-     if (formatType === 'currency') {
-       const digits = raw.replace(/\D/g, '');
-       const num = parseInt(digits || '0', 10) / 100;
-       onChange && onChange(isNaN(num) ? 0 : num);
-     } else if (formatType === 'percentage' || formatType === 'integer') {
-       const cleaned = raw.replace(/[^\d.-]/g, '');
-       onChange && onChange(parseFloat(cleaned) || 0);
-     } else {
-       const cleaned = raw.replace(',', '.').replace(/[^\d.-]/g, '');
-       onChange && onChange(parseFloat(cleaned) || 0);
-     }
+  const handleFocus = () => {
+    if (readOnly) return;
+    setIsFocused(true);
+    setEditValue(numericValue === 0 ? '' : numericValue.toString().replace('.', ','));
   };
 
-  const inputValue = formatValue(numericValue);
-  const showPrefix = formatType === 'currency';
-  const showSuffix = formatType === 'percentage';
+  const handleBlur = () => {
+    setIsFocused(false);
+    let cleaned = editValue.replace(',', '.');
+    const parsed = parseFloat(cleaned);
+    onChange && onChange(isNaN(parsed) ? 0 : parsed);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+     const val = e.target.value;
+     setEditValue(val);
+     
+     let cleaned = val.replace(',', '.');
+     const parsed = parseFloat(cleaned);
+     onChange && onChange(isNaN(parsed) ? 0 : parsed);
+  };
+
+  const inputValue = isFocused ? editValue : formatValue(numericValue);
+  const showPrefix = formatType === 'currency' && !isFocused;
+  const showSuffix = formatType === 'percentage' && !isFocused;
 
   return (
     <div className="flex flex-col w-full relative">
@@ -72,11 +76,13 @@ const InputField = ({ label, value, onChange, readOnly = false, highlight = fals
         {showPrefix && <span className="absolute left-3 text-[#8a99ad] text-sm font-medium z-10 transition-opacity duration-200">R$</span>}
         <input 
           type="text"
-          inputMode={formatType === 'currency' ? 'numeric' : 'decimal'}
+          inputMode={formatType === 'currency' ? 'decimal' : 'decimal'}
           value={inputValue}
           onChange={readOnly ? undefined : handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           readOnly={readOnly}
-          placeholder={formatType === 'currency' ? "0,00" : "0"}
+          placeholder={isFocused ? "" : (formatType === 'currency' ? "0,00" : "0")}
           className={cn(
             "w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]",
             showPrefix ? "pl-9" : "",
@@ -104,6 +110,34 @@ const ExpenseInput = ({ label, valor, onChangeValor, dia, onChangeDia, isReadOnl
   </div>
 );
 
+const useLocalStorage = <T,>(key: string, initialValue: T) => {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    if (typeof window === "undefined") {
+      return initialValue;
+    }
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.log(error);
+      return initialValue;
+    }
+  });
+
+  const setValue = (value: T | ((val: T) => T)) => {
+    try {
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      setStoredValue(valueToStore);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  return [storedValue, setValue] as const;
+};
+
 export default function App() {
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -114,71 +148,65 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // Ganhos Diários
-  const [ganhosDiarios, setGanhosDiarios] = useState<GanhoDiario[]>([
+  const [ganhosDiarios, setGanhosDiarios] = useLocalStorage<GanhoDiario[]>('app_ganhosDiarios', [
     { id: 'initial-ifood-saldo', data: (() => { const d = new Date(); return d.toISOString().split('T')[0]; })(), app: 'iFood', valor: 414.31 }
   ]);
-  const [novoGanhoAppData, setNovoGanhoAppData] = useState(() => {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
-  });
-  const [novoGanhoOutroData, setNovoGanhoOutroData] = useState(() => {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
-  });
+  const [novoGanhoAppData, setNovoGanhoAppData] = useLocalStorage('app_novoGanhoAppData', new Date().toISOString().split('T')[0]);
+  const [novoGanhoOutroData, setNovoGanhoOutroData] = useLocalStorage('app_novoGanhoOutroData', new Date().toISOString().split('T')[0]);
   
-  const [novoGanhoApp, setNovoGanhoApp] = useState('Uber');
-  const [novoGanhoAppValor, setNovoGanhoAppValor] = useState(0);
+  const [novoGanhoApp, setNovoGanhoApp] = useLocalStorage('app_novoGanhoApp', 'Uber');
+  const [novoGanhoAppValor, setNovoGanhoAppValor] = useLocalStorage('app_novoGanhoAppValor', 0);
 
-  const [novoGanhoOutroDesc, setNovoGanhoOutroDesc] = useState('');
-  const [novoGanhoOutroValor, setNovoGanhoOutroValor] = useState(0);
+  const [novoGanhoOutroDesc, setNovoGanhoOutroDesc] = useLocalStorage('app_novoGanhoOutroDesc', '');
+  const [novoGanhoOutroValor, setNovoGanhoOutroValor] = useLocalStorage('app_novoGanhoOutroValor', 0);
 
   // Config
   const entradaBruta = ganhosDiarios.reduce((acc, ganho) => acc + ganho.valor, 0);
-  const [descontoPct, setDescontoPct] = useState(10.0);
-  const [mesRef, setMesRef] = useState('junho');
+  const [descontoPct, setDescontoPct] = useLocalStorage('app_descontoPct', 10.0);
+  const [mesRef, setMesRef] = useLocalStorage('app_mesRef', 'junho');
 
   // Casa
-  const [casaAluguel, setCasaAluguel] = useState(950.00);
-  const [casaAluguelDia, setCasaAluguelDia] = useState(29);
-  const [casaConect, setCasaConect] = useState(79.99);
-  const [casaConectDia, setCasaConectDia] = useState(20);
-  const [casaVivo, setCasaVivo] = useState(53.00);
-  const [casaVivoDia, setCasaVivoDia] = useState(10);
-  const [casaTim, setCasaTim] = useState(20.00);
-  const [casaTimDia, setCasaTimDia] = useState(10);
-  const [casaPensao, setCasaPensao] = useState(729.45);
-  const [casaPensaoDia, setCasaPensaoDia] = useState(10);
-  const [casaBarbeiro, setCasaBarbeiro] = useState(105.00);
-  const [casaBarbeiroDia, setCasaBarbeiroDia] = useState(5);
-  const [casaCompra, setCasaCompra] = useState(850.00);
-  const [casaCompraDia, setCasaCompraDia] = useState(7);
-  const [casaLuz, setCasaLuz] = useState(169.44);
-  const [casaLuzDia, setCasaLuzDia] = useState(15);
+  const [casaAluguel, setCasaAluguel] = useLocalStorage('app_casaAluguel', 950.00);
+  const [casaAluguelDia, setCasaAluguelDia] = useLocalStorage('app_casaAluguelDia', 29);
+  const [casaConect, setCasaConect] = useLocalStorage('app_casaConect', 79.99);
+  const [casaConectDia, setCasaConectDia] = useLocalStorage('app_casaConectDia', 20);
+  const [casaVivo, setCasaVivo] = useLocalStorage('app_casaVivo', 53.00);
+  const [casaVivoDia, setCasaVivoDia] = useLocalStorage('app_casaVivoDia', 10);
+  const [casaTim, setCasaTim] = useLocalStorage('app_casaTim', 20.00);
+  const [casaTimDia, setCasaTimDia] = useLocalStorage('app_casaTimDia', 10);
+  const [casaPensao, setCasaPensao] = useLocalStorage('app_casaPensao', 729.45);
+  const [casaPensaoDia, setCasaPensaoDia] = useLocalStorage('app_casaPensaoDia', 10);
+  const [casaBarbeiro, setCasaBarbeiro] = useLocalStorage('app_casaBarbeiro', 105.00);
+  const [casaBarbeiroDia, setCasaBarbeiroDia] = useLocalStorage('app_casaBarbeiroDia', 5);
+  const [casaCompra, setCasaCompra] = useLocalStorage('app_casaCompra', 850.00);
+  const [casaCompraDia, setCasaCompraDia] = useLocalStorage('app_casaCompraDia', 7);
+  const [casaLuz, setCasaLuz] = useLocalStorage('app_casaLuz', 169.44);
+  const [casaLuzDia, setCasaLuzDia] = useLocalStorage('app_casaLuzDia', 15);
 
   // Moto
-  const [motoParcela, setMotoParcela] = useState(980.00);
-  const [motoParcelaDia, setMotoParcelaDia] = useState(5);
-  const [motoPrestacao, setMotoPrestacao] = useState(1093.55);
-  const [motoPrestacaoDia, setMotoPrestacaoDia] = useState(8);
-  const [motoSeguro, setMotoSeguro] = useState(175.20);
-  const [motoSeguroDia, setMotoSeguroDia] = useState(20);
-  const [motoLitrosSemana, setMotoLitrosSemana] = useState(12);
-  const [motoPrecoLitro, setMotoPrecoLitro] = useState(6.50);
+  const [motoParcela, setMotoParcela] = useLocalStorage('app_motoParcela', 980.00);
+  const [motoParcelaDia, setMotoParcelaDia] = useLocalStorage('app_motoParcelaDia', 5);
+  const [motoPrestacao, setMotoPrestacao] = useLocalStorage('app_motoPrestacao', 1093.55);
+  const [motoPrestacaoDia, setMotoPrestacaoDia] = useLocalStorage('app_motoPrestacaoDia', 8);
+  const [motoSeguro, setMotoSeguro] = useLocalStorage('app_motoSeguro', 175.20);
+  const [motoSeguroDia, setMotoSeguroDia] = useLocalStorage('app_motoSeguroDia', 20);
+  const [motoLitrosSemana, setMotoLitrosSemana] = useLocalStorage('app_motoLitrosSemana', 12);
+  const [motoPrecoLitro, setMotoPrecoLitro] = useLocalStorage('app_motoPrecoLitro', 6.50);
   const motoCombustivel = motoLitrosSemana * 4 * motoPrecoLitro;
-  const [motoCombustivelDia, setMotoCombustivelDia] = useState(30);
-  const [motoOleo, setMotoOleo] = useState(59.90);
-  const [motoOleoDia, setMotoOleoDia] = useState(30);
-  const [motoFiltro, setMotoFiltro] = useState(16.90);
-  const [motoFiltroDia, setMotoFiltroDia] = useState(30);
+  const [motoCombustivelDia, setMotoCombustivelDia] = useLocalStorage('app_motoCombustivelDia', 30);
+  const [motoOleo, setMotoOleo] = useLocalStorage('app_motoOleo', 59.90);
+  const [motoOleoDia, setMotoOleoDia] = useLocalStorage('app_motoOleoDia', 30);
+  const [motoFiltro, setMotoFiltro] = useLocalStorage('app_motoFiltro', 16.90);
+  const [motoFiltroDia, setMotoFiltroDia] = useLocalStorage('app_motoFiltroDia', 30);
 
   // Crédito
-  const [cartaoNubank, setCartaoNubank] = useState(139.98);
-  const [cartaoNubankDia, setCartaoNubankDia] = useState(10);
-  const [lisePrincipal, setLisePrincipal] = useState(410.00);
-  const [liseSantanderDia, setLiseSantanderDia] = useState(15);
-  const [liseJurosPct, setLiseJurosPct] = useState(8.00);
-  const [liseDias, setLiseDias] = useState(14);
-  const [liseIof, setLiseIof] = useState(3.10);
+  const [cartaoNubank, setCartaoNubank] = useLocalStorage('app_cartaoNubank', 139.98);
+  const [cartaoNubankDia, setCartaoNubankDia] = useLocalStorage('app_cartaoNubankDia', 10);
+  const [lisePrincipal, setLisePrincipal] = useLocalStorage('app_lisePrincipal', 410.00);
+  const [liseSantanderDia, setLiseSantanderDia] = useLocalStorage('app_liseSantanderDia', 15);
+  const [liseJurosPct, setLiseJurosPct] = useLocalStorage('app_liseJurosPct', 8.00);
+  const [liseDias, setLiseDias] = useLocalStorage('app_liseDias', 14);
+  const [liseIof, setLiseIof] = useLocalStorage('app_liseIof', 3.10);
 
   // Effect for Mes Ref
   useEffect(() => {
