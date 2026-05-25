@@ -435,13 +435,19 @@ export default function App() {
             onClick={() => setActiveTab('dashboard')}
             className={cn("flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center whitespace-nowrap", activeTab === 'dashboard' ? "bg-[#00e5ff]/10 text-[#00e5ff] shadow-[0_0_10px_rgba(0,229,255,0.2)]" : "text-[#8a99ad] hover:text-[#00e5ff] hover:bg-white/5")}
           >
-            <LayoutDashboard className="w-4 h-4" /> Configuração & Status
+            <LayoutDashboard className="w-4 h-4" /> Status & Entradas
           </button>
           <button 
-            onClick={() => setActiveTab('gastos')}
-            className={cn("flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center whitespace-nowrap", activeTab === 'gastos' ? "bg-[#00e5ff]/10 text-[#00e5ff] shadow-[0_0_10px_rgba(0,229,255,0.2)]" : "text-[#8a99ad] hover:text-[#00e5ff] hover:bg-white/5")}
+            onClick={() => setActiveTab('casa')}
+            className={cn("flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center whitespace-nowrap", activeTab === 'casa' ? "bg-[#00e5ff]/10 text-[#00e5ff] shadow-[0_0_10px_rgba(0,229,255,0.2)]" : "text-[#8a99ad] hover:text-[#00e5ff] hover:bg-white/5")}
           >
-            <Layers className="w-4 h-4" /> Casa & Moto
+            <Home className="w-4 h-4" /> Despesas Casa
+          </button>
+          <button 
+            onClick={() => setActiveTab('moto')}
+            className={cn("flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 justify-center whitespace-nowrap", activeTab === 'moto' ? "bg-[#00e5ff]/10 text-[#00e5ff] shadow-[0_0_10px_rgba(0,229,255,0.2)]" : "text-[#8a99ad] hover:text-[#00e5ff] hover:bg-white/5")}
+          >
+            <CarFront className="w-4 h-4" /> Despesas Moto
           </button>
           <button 
             onClick={() => setActiveTab('credito')}
@@ -460,47 +466,9 @@ export default function App() {
                 <PlusCircle className="w-5 h-5" />
                 Lançamento Diário de Ganhos
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-end relative mt-2">
-                {/* Apps */}
-                  <div className="bg-[#141c2f]/70 border border-[#00ffcc]/20 rounded-xl p-4 backdrop-blur-md relative">
-                   <h3 className="text-[13px] font-bold text-[#00ffcc] mb-3 uppercase tracking-wider flex items-center gap-2">
-                     <CarFront className="w-4 h-4" /> Entradas de Apps
-                   </h3>
-                   <div className="flex flex-col gap-3">
-                     <div className="flex flex-col">
-                       <label className="text-xs text-[#8a99ad] mb-[4px] font-medium">Data</label>
-                       <input 
-                         type="date" 
-                         value={novoGanhoAppData}
-                         onChange={(e) => setNovoGanhoAppData(e.target.value)}
-                         className="w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
-                       />
-                     </div>
-                     <div className="flex flex-col">
-                       <label className="text-xs text-[#8a99ad] mb-[4px] font-medium">Aplicativo</label>
-                       <select 
-                         value={novoGanhoApp}
-                         onChange={(e) => setNovoGanhoApp(e.target.value)}
-                         className="w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
-                       >
-                         <option value="iFood">iFood</option>
-                         <option value="Uber">Uber</option>
-                         <option value="99 Food">99 Food</option>
-                         <option value="99 Passageiro">99 Passageiro</option>
-                       </select>
-                     </div>
-                     <InputField label="Valor Feito (R$)" value={novoGanhoAppValor} onChange={setNovoGanhoAppValor} />
-                     <button 
-                       onClick={adicionarGanhoApp}
-                       className="w-full bg-gradient-to-r from-[#0077ff] to-[#00ffcc] border-none rounded-lg text-black p-2.5 font-bold cursor-pointer hover:shadow-[0_0_15px_rgba(0,255,204,0.4)] transition-all flex items-center justify-center text-xs uppercase tracking-wide mt-2"
-                     >
-                       Injetar Saldo App
-                     </button>
-                   </div>
-                </div>
-
+              
                 {/* Outros */}
-                <div className="bg-[#141c2f]/70 border border-[#ff0055]/20 rounded-xl p-4 backdrop-blur-md relative">
+                <div className="bg-[#141c2f]/70 border border-[#ff0055]/20 rounded-xl p-4 backdrop-blur-md relative max-w-md">
                    <h3 className="text-[13px] font-bold text-[#ff0055] mb-3 uppercase tracking-wider flex items-center gap-2">
                      <Wallet className="w-4 h-4" /> Outras Entradas
                    </h3>
@@ -533,7 +501,6 @@ export default function App() {
                      </button>
                    </div>
                 </div>
-              </div>
 
               {ganhosDiarios.length > 0 && (
                 <div className="mt-4 max-h-[150px] overflow-y-auto border border-white/5 rounded-lg bg-black/20">
@@ -684,8 +651,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab Content: Gastos Fixos de Casa e Moto */}
-        {activeTab === 'gastos' && (
+        {/* Tab Content: Gastos Fixos de Casa */}
+        {activeTab === 'casa' && (
           <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
             {/* Casa */}
             <div className="bg-[#141828]/65 backdrop-blur-md border border-[#00e5ff]/20 rounded-2xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.37)]">
@@ -704,8 +671,57 @@ export default function App() {
                 <ExpenseInput label="Luz" valor={casaLuz} onChangeValor={setCasaLuz} dia={casaLuzDia} onChangeDia={setCasaLuzDia} />
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Moto */}
+        {/* Tab Content: Moto (Tudo referente à moto) */}
+        {activeTab === 'moto' && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* Lançamento de Entradas de Apps (Moto) */}
+            <div className="bg-[#141828]/65 backdrop-blur-md border border-[#00e5ff]/20 rounded-2xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.37)]">
+              <h2 className="text-lg font-bold text-[#00e5ff] border-b border-[#00e5ff]/20 pb-2 mb-4 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)] flex items-center gap-2">
+                <PlusCircle className="w-5 h-5" />
+                Lançamento Diário de Entradas (Moto)
+              </h2>
+              <div className="bg-[#141c2f]/70 border border-[#00ffcc]/20 rounded-xl p-4 backdrop-blur-md relative max-w-md">
+                 <h3 className="text-[13px] font-bold text-[#00ffcc] mb-3 uppercase tracking-wider flex items-center gap-2">
+                   <CarFront className="w-4 h-4" /> Entradas de Apps
+                 </h3>
+                 <div className="flex flex-col gap-3">
+                   <div className="flex flex-col">
+                     <label className="text-xs text-[#8a99ad] mb-[4px] font-medium">Data</label>
+                     <input 
+                       type="date" 
+                       value={novoGanhoAppData}
+                       onChange={(e) => setNovoGanhoAppData(e.target.value)}
+                       className="w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
+                     />
+                   </div>
+                   <div className="flex flex-col">
+                     <label className="text-xs text-[#8a99ad] mb-[4px] font-medium">Aplicativo</label>
+                     <select 
+                       value={novoGanhoApp}
+                       onChange={(e) => setNovoGanhoApp(e.target.value)}
+                       className="w-full bg-[#141828] border border-white/10 rounded-lg text-[#f5f5f7] p-2 text-sm outline-none transition-all focus:border-[#00e5ff] focus:shadow-[0_0_8px_rgba(0,229,255,0.4)]"
+                     >
+                       <option value="iFood">iFood</option>
+                       <option value="Uber">Uber</option>
+                       <option value="99 Food">99 Food</option>
+                       <option value="99 Passageiro">99 Passageiro</option>
+                     </select>
+                   </div>
+                   <InputField label="Valor Feito (R$)" value={novoGanhoAppValor} onChange={setNovoGanhoAppValor} />
+                   <button 
+                     onClick={adicionarGanhoApp}
+                     className="w-full bg-gradient-to-r from-[#0077ff] to-[#00ffcc] border-none rounded-lg text-black p-2.5 font-bold cursor-pointer hover:shadow-[0_0_15px_rgba(0,255,204,0.4)] transition-all flex items-center justify-center text-xs uppercase tracking-wide mt-2"
+                   >
+                     Injetar Saldo App
+                   </button>
+                 </div>
+              </div>
+            </div>
+
+            {/* Moto Gastos */}
             <div className="bg-[#141828]/65 backdrop-blur-md border border-[#00e5ff]/20 rounded-2xl p-5 sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.37)]">
               <h2 className="text-lg font-bold text-[#00e5ff] border-b border-[#00e5ff]/20 pb-2 mb-4 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)] flex items-center gap-2">
                 <CarFront className="w-5 h-5" />
